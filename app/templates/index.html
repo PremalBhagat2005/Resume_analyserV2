@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Resume - Resume Analyser{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <h2>Optimize Your Resume for ATS</h2>
+            <p>Get an instant ATS score, extract key information, and match your resume against job descriptions using AI-powered analysis.</p>
+        </div>
+        
+        <form class="upload-form" method="POST" action="{{ url_for('analyse.analyse') }}" enctype="multipart/form-data">
+            <div class="form-group">
+                <div class="file-input-wrapper">
+                    <input type="file" id="resume-file" name="file" accept=".pdf,.docx,.txt" required>
+                    <label for="resume-file" class="file-input-label">
+                        <div class="file-input-box">
+                            <span class="file-icon">📄</span>
+                            <span class="file-text">Click to upload or drag and drop</span>
+                            <span class="file-hint">PDF, DOCX or TXT (Max 5MB)</span>
+                        </div>
+                    </label>
+                </div>
+                <div class="selected-file-info" style="display: none;">
+                    <p class="file-selected-text">✓ File selected - ready to analyze!</p>
+                </div>
+                <p class="field-hint" style="margin-top: 0.5rem; text-align: center;">After selecting a file, click "Analyze Resume" below to process it.</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="job-description">Job Description (Optional)</label>
+                <textarea 
+                    id="job-description" 
+                    name="job_description" 
+                    placeholder="Paste the job description here for job matching analysis..."
+                    rows="8"
+                    class="textarea"></textarea>
+                <span class="field-hint">Leave empty if you only want ATS scoring</span>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Analyze Resume</button>
+        </form>
+    </div>
+</section>
+
+<section class="info-section">
+    <div class="container">
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-icon">🎯</div>
+                <h3>ATS Score</h3>
+                <p>Get an instant score (0-100) based on ATS optimization factors and formatting.</p>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon">🔍</div>
+                <h3>Entity Extraction</h3>
+                <p>Automatically extract name, email, phone, skills, education, and experience.</p>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon">⚡</div>
+                <h3>Job Matching</h3>
+                <p>Compare your resume against job descriptions for keyword and skill alignment.</p>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon">💡</div>
+                <h3>Recommendations</h3>
+                <p>Get actionable suggestions to improve your ATS score and job match percentage.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Resume Analyser{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <h1>Resume Analyser</h1>
+            </div>
+        </div>
+    </header>
+    
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Resume Analyser. Optimize your resume for ATS.</p>
+        </div>
+    </footer>
+
+    <script>
+        // UX Enhancement: Show "File selected" message when file is chosen
+        // Core ATS analysis functionality works independently without JavaScript
+        const fileInput = document.getElementById('resume-file');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                const selectedInfo = document.querySelector('.selected-file-info');
+                if (selectedInfo) {
+                    selectedInfo.style.display = this.files && this.files.length > 0 ? 'block' : 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

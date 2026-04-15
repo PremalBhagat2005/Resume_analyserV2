@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Results - Resume Analyser{% endblock %}
+
+{% block content %}
+<section class="results-section">
+    <div class="container">
+        {% if error %}
+            <div class="error-card">
+                <span class="error-icon">❌</span>
+                <h2>Error</h2>
+                <p>{{ error }}</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">Try Again</a>
+            </div>
+        {% else %}
+            <!-- Upload Confirmation Card -->
+            {% if file_name %}
+            <div class="upload-confirmation-card">
+                <div class="confirmation-header">
+                    <span class="confirmation-icon">✅</span>
+                    <h3>File Uploaded Successfully</h3>
+                </div>
+                <div class="file-info-box">
+                    <span class="file-label">Analyzing:</span>
+                    <span class="file-display">{{ file_name }}</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ATS Score Card -->
+            <div class="score-card">
+                <h2>ATS Analysis Results</h2>
+                
+                <div class="score-display">
+                    <div class="score-gauge">
+                        <div class="gauge-circle" style="--score: {{ ats_score }};{% if ats_score >= 75 %}--color: #00d4aa;{% elif ats_score >= 50 %}--color: #ffb800;{% else %}--color: #ff4757;{% endif %}">
+                            <span class="gauge-text">{{ ats_score }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="score-breakdown">
+                        <h3>Score Breakdown</h3>
+                        <div class="breakdown-items">
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Contact Information</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: {{ (ats_breakdown.contact_info / 20) * 100 }}%"></div>
+                                </div>
+                                <span class="breakdown-value">{{ ats_breakdown.contact_info }}/20</span>
+                            </div>
+                            
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Skills Section</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: {{ (ats_breakdown.skills_section / 20) * 100 }}%"></div>
+                                </div>
+                                <span class="breakdown-value">{{ ats_breakdown.skills_section }}/20</span>
+                            </div>
+                            
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Education Section</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: {{ (ats_breakdown.education_section / 15) * 100 }}%"></div>
+                                </div>
+                                <span class="breakdown-value">{{ ats_breakdown.education_section }}/15</span>
+                            </div>
+                            
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Experience Section</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: {{ (ats_breakdown.experience_section / 15) * 100 }}%"></div>
+                                </div>
+                                <span class="breakdown-value">{{ ats_breakdown.experience_section }}/15</span>
+                            </div>
+                            
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Action Verbs & Keywords</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: {{ (ats_breakdown.action_verbs / 20) * 100 }}%"></div>
+                                </div>
+                                <span class="breakdown-value">{{ ats_breakdown.action_verbs }}/20</span>
+                            </div>
+                            
+                            <div class="breakdown-item">
+                                <span class="breakdown-label">Resume Length</span>
+                                <div class="breakdown-bar">
+                                    <div class="breakdown-fill" style="width: {{ (ats_breakdown.resume_length / 10) * 100 }}%"></div>
+                                </div>
+                                <span class="breakdown-value">{{ ats_breakdown.resume_length }}/10</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="word-count-info">Resume: <strong>{{ word_count }} words</strong> (recommended: 300-800)</p>
+            </div>
+            
+            <!-- Analytics Charts Section -->
+            {% if chart_paths %}
+            <div class="analytics-section">
+                <h2 class="analytics-title">📊 Visual Analytics</h2>
+                
+                <!-- ATS Breakdown Chart -->
+                {% if chart_paths.get('ats_breakdown') %}
+                <div class="chart-card">
+                    <h3 class="chart-title">ATS Score Breakdown</h3>
+                    <div class="chart-container">
+                        <img src="{{ chart_paths.ats_breakdown }}" alt="ATS Score Breakdown Chart" class="chart-image">
+                    </div>
+                    <p class="chart-description">Detailed breakdown of your resume's ATS performance across six key categories.</p>
+                </div>
+                {% endif %}
+                
+                <!-- Score Summary Chart -->
+                {% if chart_paths.get('score_summary') %}
+                <div class="chart-card">
+                    <h3 class="chart-title">Resume Analysis Summary</h3>
+                    <div class="chart-container">
+                        <img src="{{ chart_paths.score_summary }}" alt="Score Summary Chart" class="chart-image">
+                    </div>
+                    <p class="chart-description">Overall scores comparison: ATS Score{% if has_job_description %} vs Job Match Score{% endif %}.</p>
+                </div>
+                {% endif %}
+                
+                <!-- Skill Comparison Chart -->
+                {% if chart_paths.get('skill_comparison') and has_job_description %}
+                <div class="chart-card">
+                    <h3 class="chart-title">Skill Gap Analysis</h3>
+                    <div class="chart-container">
+                        <img src="{{ chart_paths.skill_comparison }}" alt="Skill Comparison Chart" class="chart-image">
+                    </div>
+                    <p class="chart-description">Comparison between your matched skills and missing skills from the job description.</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Job Description Match Card -->
+            {% if job_match %}
+            <div class="card">
+                <h2 class="card__title">
+                    <span class="card__icon">🎯</span> Job Description Match
+                </h2>
+                <div class="match-layout">
+                    <!-- Score Circle -->
+                    <div class="score-circle-wrap">
+                        <div class="score-circle score-circle--match"
+                             style="--score: {{ job_match.match_score }};">
+                            <span class="score-number">{{ job_match.match_score }}</span>
+                            <span class="score-label">Match %</span>
+                        </div>
+                    </div>
+                    <!-- Details -->
+                    <div class="match-details">
+                        <p class="match-feedback">{{ job_match.feedback }}</p>
+                        {% if job_match.matched_keywords %}
+                        <div class="match-group">
+                            <h4 class="match-group__title match-group__title--green">
+                                ✅ Matched Keywords
+                            </h4>
+                            <div class="tags-container">
+                                {% for kw in job_match.matched_keywords %}
+                                    <span class="tag tag--matched">{{ kw }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if job_match.missing_keywords %}
+                        <div class="match-group">
+                            <h4 class="match-group__title match-group__title--red">
+                                ❌ Missing Keywords
+                            </h4>
+                            <div class="tags-container">
+                                {% for kw in job_match.missing_keywords %}
+                                    <span class="tag tag--missing">{{ kw }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Extracted Information Card -->
+            {% if extracted_entities %}
+            <div class="info-card">
+                <h3>Extracted Information</h3>
+                <div class="extracted-info">
+                    {% if extracted_entities.name %}
+                        <div class="info-item">
+                            <span class="info-label">Name:</span>
+                            <span class="info-value">{{ extracted_entities.name }}</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if extracted_entities.email %}
+                        <div class="info-item">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">{{ extracted_entities.email }}</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if extracted_entities.phone %}
+                        <div class="info-item">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value">{{ extracted_entities.phone }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Extracted Skills Card -->
+            {% if extracted_entities.skills %}
+            <div class="skills-card">
+                <h3>Extracted Skills</h3>
+                <div class="skills-container">
+                    {% for skill in extracted_entities.skills %}
+                        <div class="skill-badge">{{ skill }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Extracted Skills Card -->
+            {% if extracted_skills %}
+            <div class="skills-card">
+                <h3>Extracted Skills</h3>
+                <div class="tags-container">
+                    {% for skill in extracted_skills %}
+                        <span class="tag tag--skill">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="skills-card">
+                <h3>Extracted Skills</h3>
+                <p class="empty-state">No recognised skills detected. Try adding a dedicated Skills section to your resume.</p>
+            </div>
+            {% endif %}
+            
+            <!-- Work Experience Card -->
+            {% if work_experience %}
+            <div class="card">
+                <h2 class="card__title">
+                    <span class="card__icon">💼</span> Work Experience
+                </h2>
+                <div class="experience-list">
+                    {% for exp in work_experience %}
+                    <div class="experience-item">
+                        <div class="experience-item__header">
+                            <div>
+                                <h3 class="experience-item__title">
+                                    {{ exp.title or "Role not detected" }}
+                                </h3>
+                                <p class="experience-item__company">
+                                    {{ exp.company or "Company not detected" }}
+                                </p>
+                            </div>
+                            {% if exp.duration %}
+                            <span class="experience-item__duration">{{ exp.duration }}</span>
+                            {% endif %}
+                        </div>
+                        {% if exp.description %}
+                        <p class="experience-item__desc">{{ exp.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Keywords Card -->
+            {% if keywords %}
+            <div class="keywords-card">
+                <h3>Extracted Keywords</h3>
+                <div class="keywords-pills">
+                    {% for keyword in keywords[:30] %}
+                        <span class="keyword-pill">{{ keyword }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Missing Sections Card -->
+            {% if missing_sections %}
+            <div class="missing-card">
+                <h3>Missing Sections</h3>
+                <ul class="missing-list">
+                    {% for section in missing_sections %}
+                        <li>
+                            <span class="missing-icon">⚠️</span>
+                            <span>{{ section }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Suggestions Card -->
+            {% if suggestions %}
+            <div class="suggestions-card">
+                <h3>Improvement Suggestions</h3>
+                <ul class="suggestions-list">
+                    {% for suggestion in suggestions %}
+                        <li>
+                            <span class="suggestion-icon">💡</span>
+                            <span>{{ suggestion }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Job Matching Card -->
+            {% if has_job_description and match_result %}
+            <div class="match-card">
+                <h2>Job Description Matching</h2>
+                
+                <div class="match-score">
+                    <div class="match-gauge">
+                        <div class="gauge-circle" style="--score: {{ match_result.match_score }};{% if match_result.match_score >= 75 %}--color: #00d4aa;{% elif match_result.match_score >= 50 %}--color: #ffb800;{% else %}--color: #ff4757;{% endif %}">
+                            <span class="gauge-text">{{ match_result.match_score }}%</span>
+                        </div>
+                    </div>
+                    <div class="match-info">
+                        <h3>Match Score</h3>
+                        <p>This score represents how well your resume aligns with the job description requirements.</p>
+                        <p class="match-status">
+                            {% if match_result.match_score >= 75 %}
+                                <span class="status-excellent">Excellent match! 🎯</span>
+                            {% elif match_result.match_score >= 50 %}
+                                <span class="status-good">Good alignment with some gaps</span>
+                            {% else %}
+                                <span class="status-fair">Consider adding more relevant keywords</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if match_result.strength_areas %}
+                <div class="match-section">
+                    <h4>Strength Areas</h4>
+                    <p class="section-desc">Skills and requirements you have covered:</p>
+                    <div class="keyword-pills">
+                        {% for skill in match_result.strength_areas %}
+                            <span class="keyword-pill green">✓ {{ skill }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if match_result.improvement_areas %}
+                <div class="match-section">
+                    <h4>Areas for Improvement</h4>
+                    <p class="section-desc">Skills from job description you should emphasize:</p>
+                    <div class="keyword-pills">
+                        {% for skill in match_result.improvement_areas %}
+                            <span class="keyword-pill amber">⚡ {{ skill }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if match_result.job_requirements %}
+                <div class="match-section">
+                    <h4>Job Requirements Found</h4>
+                    <ul class="requirements-list">
+                        {% if 'years_of_experience' in match_result.job_requirements %}
+                            <li>✓ Experience requirement mentioned</li>
+                        {% endif %}
+                        {% if 'education' in match_result.job_requirements %}
+                            <li>✓ Education/degree required</li>
+                        {% endif %}
+                        {% if 'certifications' in match_result.job_requirements %}
+                            <li>✓ Certifications mentioned</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Action Button -->
+            <div class="action-buttons">
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">Analyze Another Resume</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
