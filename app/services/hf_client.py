@@ -79,6 +79,134 @@ def call_hf_api(model: str, payload: Dict[str, Any], max_retries: int = MAX_RETR
     raise Exception("API call failed after maximum retries")
 
 
+def extract_contact_info(resume_text: str) -> Dict[str, str]:
+    """
+    Extract contact information (name, email, phone) using pure regex and heuristics.
+    This replaces NER-based contact extraction which is unreliable.
+    
+    Returns:
+        dict: Contact info with keys 'name', 'email', 'phone' (values are strings or 'Not detected')
+    """
+    lines = [l.strip() for l in (resume_text or '').split('\n') if l.strip()]
+
+    # --- EMAIL (regex, always reliable) ---
+    email_pattern = r'[\w\.\+\-]+@[\w\.\-]+\.[a-zA-Z]{2,}'
+    email = None
+    for line in lines:
+        match = re.search(email_pattern, line)
+        if match:
+            email = match.group(0).strip().lower()
+            break
+
+    # Fallback for wrapped/spaced variants like "name @ domain . com".
+    if not email:
+        full_text = '\n'.join(lines)
+        spaced_email_pattern = r'[\w\.\+\-]+\s*@\s*[\w\.\-]+\s*\.\s*[a-zA-Z]{2,}'
+        match = re.search(spaced_email_pattern, full_text)
+        if match:
+            email = re.sub(r'\s+', '', match.group(0)).lower()
+
+    # --- PHONE (regex) ---
+    # Handles common international and local phone formats with separators/parentheses.
+    phone_pattern = r'((?:\+?\d{1,3}[\s\-.]?)?(?:\(\d{1,4}\)[\s\-.]?)?[\d\s\-.]{7,20}\d)'
+    phone = None
+
+    def _extract_phone_from_text(candidate_text: str) -> str:
+        normalized = (
+            candidate_text
+            .replace('\u00a0', ' ')
+            .replace('\u2013', '-')
+            .replace('\u2014', '-')
+        )
+        for match in re.finditer(phone_pattern, normalized):
+            candidate = re.sub(r'\s+', ' ', match.group(1)).strip(' .-')
+            digits = re.sub(r'\D', '', candidate)
+            if 7 <= len(digits) <= 15:
+                return candidate
+        return None
+
+    for line in lines:
+        lower_line = line.lower()
+        if '@' in lower_line or 'http' in lower_line:
+            continue
+        phone = _extract_phone_from_text(line)
+        if phone:
+            break
+
+    # Fallback: scan entire resume text in case line splitting breaks number groups.
+    if not phone:
+        full_text = '\n'.join(lines)
+        phone = _extract_phone_from_text(full_text)
+
+    # --- NAME ---
+    email_blacklist = set()
+    if email:
+        prefix = email.split('@')[0].lower()
+        email_blacklist.add(prefix)
+        for i in range(len(prefix)):
+            for j in range(i + 4, len(prefix) + 1):
+                email_blacklist.add(prefix[i:j])
+
+    skip_words = {
+        'resume', 'cv', 'curriculum', 'vitae', 'summary', 'objective',
+        'profile', 'contact', 'address', 'phone', 'email', 'linkedin',
+        'github', 'portfolio', 'reference', 'skill', 'skills', 'education',
+        'experience', 'project', 'projects', 'certification', 'certifications',
+        'award', 'awards', 'language', 'languages', 'interests', 'about',
+        'core', 'tools', 'frontend', 'backend', 'database', 'work',
+        'intern', 'developer', 'engineer', 'analyst', 'designer', 'manager',
+        'web', 'software', 'data', 'lead', 'senior', 'junior', 'associate',
+        'trainee', 'assistant', 'coordinator', 'specialist',
+        'remote', 'technology',
+        'university', 'college', 'institute', 'school', 'high'
+    }
+
+    address_indicators = {
+        'state', 'country', 'district', 'city', 'road', 'street', 'st', 'lane', 'ln',
+        'avenue', 'ave', 'sector', 'block', 'pin', 'zipcode', 'postal', 'address'
+    }
+
+    name = None
+    for line in lines[:20]:
+        if any(c in line for c in ['@', '/', '\\', '|', '+', '#']):
+            continue
+        lower_line = line.lower()
+        if 'http' in lower_line or 'www.' in lower_line:
+            continue
+        if ',' in line:
+            continue
+
+        clean = re.sub(r'[^\w\s]', ' ', line).strip()
+        clean = re.sub(r'\s+', ' ', clean).strip()
+        words = clean.split()
+
+        if len(words) < 2 or len(words) > 4:
+            continue
+        if any(w[0].isdigit() for w in words if w):
+            continue
+        if any(w.lower() in address_indicators for w in words):
+            continue
+        if any(w.lower() in skip_words for w in words):
+            continue
+
+        def looks_like_name_word(w: str) -> bool:
+            return (
+                len(w) >= 2
+                and w.isalpha()
+                and (w[0].isupper() or w.isupper())
+            )
+
+        if all(looks_like_name_word(w) for w in words):
+            name = ' '.join(w.capitalize() for w in words)
+            break
+
+    return {
+        'name': name or 'Not detected',
+        'email': email or 'Not detected',
+        'phone': phone or 'Not detected'
+    }
+
+
 def extract_name_fallback(text: str) -> str:
     """
     Fallback: grab the first non-empty line of resume as candidate name.
@@ -95,73 +223,231 @@ def extract_name_fallback(text: str) -> str:
     return None
 
 
+def extract_email_fallback(text: str) -> str:
+    """Fallback: extract email using regex"""
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    matches = re.findall(email_pattern, text)
+    return matches[0] if matches else None
+
+
+def extract_phone_fallback(text: str) -> str:
+    """Fallback: extract phone number using regex"""
+    phone_pattern = r'[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}'
+    matches = re.findall(phone_pattern, text)
+    return matches[0] if matches else None
+
+
+def extract_skills_fallback(text: str) -> list:
+    """Fallback: extract skills by looking for common keywords"""
+    skills_keywords = [
+        'python', 'java', 'javascript', 'typescript', 'csharp', 'cpp', 'ruby', 'php', 'swift', 'kotlin',
+        'react', 'vue', 'angular', 'django', 'flask', 'fastapi', 'spring', 'nodejs', 'express',
+        'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch',
+        'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'gitlab', 'github',
+        'html', 'css', 'sass', 'bootstrap', 'tailwind',
+        'git', 'linux', 'unix', 'windows', 'macos',
+        'machine learning', 'deep learning', 'tensorflow', 'pytorch', 'scikit-learn',
+        'data analysis', 'data science', 'analytics', 'tableau', 'power bi',
+        'agile', 'scrum', 'jira', 'confluence',
+        'rest api', 'graphql', 'microservices', 'soap',
+        'testing', 'pytest', 'junit', 'selenium', 'cypress'
+    ]
+    
+    text_lower = text.lower()
+    found_skills = []
+    
+    for skill in skills_keywords:
+        if skill in text_lower and skill not in found_skills:
+            found_skills.append(skill)
+    
+    return found_skills[:15]  # Return top 15
+
+
+def extract_education_fallback(text: str) -> list:
+    """Extract education entries using strict section-based parsing."""
+    lines = [l.strip() for l in (text or '').split('\n') if l.strip()]
+
+    edu_start_headers = [
+        'education', 'academic background', 'academic qualifications',
+        'qualifications', 'scholastic details', 'educational background'
+    ]
+
+    stop_headers = [
+        'experience', 'work experience', 'employment', 'internship',
+        'projects', 'project', 'skills', 'core skills', 'technical skills',
+        'certifications', 'certification', 'awards', 'achievements',
+        'publications', 'interests', 'hobbies', 'languages', 'summary',
+        'objective', 'profile', 'about', 'contact', 'references'
+    ]
+
+    degree_keywords = [
+        'bachelor', 'b.tech', 'b tech', 'b.e', 'bsc', 'b.sc', 'be',
+        'master', 'm.tech', 'm tech', 'm.e', 'msc', 'm.sc', 'mba',
+        'phd', 'ph.d', 'doctorate', 'diploma',
+        'higher secondary', 'secondary', 'hsc', 'ssc',
+        'technology', 'engineering', 'science', 'commerce', 'arts',
+        'computer science', 'information technology',
+        '10th', '12th', 'matriculation'
+    ]
+
+    institution_keywords = [
+        'university', 'college', 'institute', 'school', 'iit', 'nit',
+        'academy', 'polytechnic', 'vidyalaya', 'mahavidyalaya'
+    ]
+
+    edu_start_idx = None
+    for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+        if len(line.split()) <= 4:
+            if any(line_lower == h or line_lower.startswith(h) for h in edu_start_headers):
+                edu_start_idx = i
+                break
+
+    if edu_start_idx is None:
+        results = []
+        for line in lines:
+            line_lower = line.lower()
+            has_degree = any(kw in line_lower for kw in degree_keywords)
+            has_inst = any(kw in line_lower for kw in institution_keywords)
+            if (has_degree or has_inst) and len(line.split()) >= 2 and len(line.split()) <= 12:
+                results.append(line.strip())
+        dedup = []
+        seen = set()
+        for line in results:
+            key = line.lower()
+            if key not in seen:
+                seen.add(key)
+                dedup.append(line)
+        return dedup[:5]
+
+    education_lines = []
+    capturing = False
+
+    for i, line in enumerate(lines):
+        if i == edu_start_idx:
+            capturing = True
+            continue
+
+        if not capturing:
+            continue
+
+        line_lower = line.lower().strip()
+
+        if len(line.split()) <= 4:
+            if any(line_lower == h or line_lower.startswith(h) for h in stop_headers):
+                break
+
+        has_degree = any(kw in line_lower for kw in degree_keywords)
+        has_inst = any(kw in line_lower for kw in institution_keywords)
+        has_year = bool(re.search(r'\b(19|20)\d{2}\b', line))
+
+        word_count = len(line.split())
+        if word_count > 12:
+            continue
+
+        if not has_degree and not has_inst and not has_year:
+            continue
+
+        education_lines.append(line.strip())
+
+    result = []
+    seen = set()
+    for line in education_lines:
+        key = line.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(line)
+
+    return result[:8]
+
+
+def extract_entities_fallback(text: str) -> Dict[str, Any]:
+    """
+    Fallback extraction using regex and pattern matching.
+    Used when Hugging Face API is unavailable or fails.
+    """
+    return {
+        "name": extract_name_fallback(text),
+        "email": extract_email_fallback(text),
+        "phone": extract_phone_fallback(text),
+        "skills": extract_skills_fallback(text),
+        "education": extract_education_fallback(text),
+        "experience": []
+    }
+
+
 def extract_entities(resume_text: str) -> Dict[str, Any]:
     """
-    Extract named entities from resume using NER model.
+    Extract named entities from resume.
+    Uses pure regex + heuristics for contact info (name, email, phone).
+    Uses NER model ONLY for skills extraction.
+    Falls back gracefully if API is unavailable.
     
     Args:
         resume_text: Raw resume text
     
     Returns:
         dict: Extracted entities (name, email, phone, skills, education, experience)
-    
-    Raises:
-        Exception: If API call fails
     """
-    payload = {
-        "inputs": resume_text
-    }
+    # Extract contact info using pure regex + heuristics (NOT NER - NER is unreliable for this)
+    contact_info = extract_contact_info(resume_text)
     
-    response = call_hf_api(NER_MODEL, payload)
-    
-    # Parse NER response
     entities = {
-        "name": None,
-        "email": None,
-        "phone": None,
+        "name": contact_info['name'],
+        "email": contact_info['email'],
+        "phone": contact_info['phone'],
         "skills": [],
-        "education": [],
+        "education": extract_education_fallback(resume_text),  # Use fallback for education
         "experience": []
     }
     
-    # Handle token classification response
-    if isinstance(response, list) and len(response) > 0:
-        if isinstance(response[0], list):
-            # Token classification format
-            for token_group in response[0]:
-                entity_group = token_group.get('entity_group', '').upper()
-                score = token_group.get('score', 0)
-                word = token_group.get('word', '').strip()
-                
-                if score < 0.5:  # Skip low confidence predictions
-                    continue
-                
-                if entity_group == 'NAME' and not entities['name']:
-                    entities['name'] = word
-                elif entity_group == 'EMAIL' and not entities['email']:
-                    entities['email'] = word
-                elif entity_group == 'PHONE' and not entities['phone']:
-                    entities['phone'] = word
-                elif entity_group == 'SKILLS' and word:
-                    if word not in entities['skills']:
-                        entities['skills'].append(word)
-                elif entity_group == 'EDUCATION' and word:
-                    if word not in entities['education']:
-                        entities['education'].append(word)
-                elif entity_group == 'EXPERIENCE' and word:
-                    if word not in entities['experience']:
-                        entities['experience'].append(word)
+    # Use NER ONLY for skills extraction
+    try:
+        payload = {
+            "inputs": resume_text
+        }
+        
+        response = call_hf_api(NER_MODEL, payload)
+        
+        print(f"[DEBUG NER] Using NER model for skills extraction. Response type: {type(response)}")
+        
+        # Parse NER response - extract skills ONLY
+        if isinstance(response, list) and len(response) > 0:
+            if isinstance(response[0], list):
+                for token_group in response[0]:
+                    entity_group = token_group.get('entity_group', '').upper() if token_group.get('entity_group') else ''
+                    score = token_group.get('score', 0)
+                    word = token_group.get('word', '').strip()
+                    
+                    if score < 0.5:  # Skip low confidence predictions
+                        continue
+                    
+                    # Extract SKILLS only from NER
+                    if ('SKILLS' in entity_group or 'SKILL' in entity_group) and word:
+                        if word not in entities['skills']:
+                            entities['skills'].append(word)
+        
+        # Fallback: if NER didn't find skills, use keyword matching
+        if not entities['skills']:
+            entities['skills'] = extract_skills_fallback(resume_text)
+        
+        print(f"[DEBUG NER] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
+        print(f"[DEBUG NER] Extracted skills via NER: {len(entities['skills'])} skills found")
+        return entities
     
-    # Fallback: Extract name if NER didn't find it
-    if not entities['name']:
-        entities['name'] = extract_name_fallback(resume_text)
-    
-    return entities
+    except Exception as api_error:
+        # API failed, use fallback for skills
+        print(f"[DEBUG NER] API error during skills extraction, using fallback: {str(api_error)}")
+        entities['skills'] = extract_skills_fallback(resume_text)
+        print(f"[DEBUG NER] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
+        print(f"[DEBUG NER] Extracted skills via fallback: {len(entities['skills'])} skills found")
+        return entities
 
 
 def get_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:
     """
     Calculate semantic similarity between resume and job description.
+    Falls back to keyword matching if API is unavailable.
     
     Args:
         resume_text: Resume text
@@ -169,35 +455,53 @@ def get_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:
     
     Returns:
         dict: Similarity score (0-100) and matched keywords
-    
-    Raises:
-        Exception: If API call fails
     """
-    payload = {
-        "inputs": {
-            "source_sentence": resume_text,
-            "sentences": [job_description]
+    try:
+        payload = {
+            "inputs": {
+                "source_sentence": resume_text,
+                "sentences": [job_description]
+            }
         }
-    }
+        
+        response = call_hf_api(SIMILARITY_MODEL, payload)
+        
+        # Parse similarity response
+        match_score = 0
+        
+        if isinstance(response, list) and len(response) > 0:
+            # Similarity score is typically between 0-1, scale to 0-100
+            match_score = int(response[0] * 100) if isinstance(response[0], (int, float)) else 0
+        
+        # Extract keywords from both texts for comparison
+        resume_words = set(resume_text.lower().split())
+        job_words = set(job_description.lower().split())
+        
+        matched_keywords = list(resume_words & job_words)
+        missing_keywords = list(job_words - resume_words)
+        
+        return {
+            "match_score": max(0, min(100, match_score)),
+            "matched_keywords": matched_keywords[:20],
+            "missing_keywords": missing_keywords[:20]
+        }
     
-    response = call_hf_api(SIMILARITY_MODEL, payload)
-    
-    # Parse similarity response
-    match_score = 0
-    
-    if isinstance(response, list) and len(response) > 0:
-        # Similarity score is typically between 0-1, scale to 0-100
-        match_score = int(response[0] * 100) if isinstance(response[0], (int, float)) else 0
-    
-    # Extract keywords from both texts for comparison
-    resume_words = set(resume_text.lower().split())
-    job_words = set(job_description.lower().split())
-    
-    matched_keywords = list(resume_words & job_words)
-    missing_keywords = list(job_words - resume_words)
-    
-    return {
-        "match_score": max(0, min(100, match_score)),
-        "matched_keywords": matched_keywords[:20],
-        "missing_keywords": missing_keywords[:20]
-    }
+    except Exception as api_error:
+        # Fallback: Simple keyword matching without API
+        resume_words = set(word.lower() for word in resume_text.split() if len(word) > 3)
+        job_words = set(word.lower() for word in job_description.split() if len(word) > 3)
+        
+        matched_keywords = list(resume_words & job_words)
+        missing_keywords = list(job_words - resume_words)
+        
+        # Calculate simple match score based on keyword overlap
+        if job_words:
+            match_score = int((len(matched_keywords) / len(job_words)) * 100)
+        else:
+            match_score = 0
+        
+        return {
+            "match_score": max(0, min(100, match_score)),
+            "matched_keywords": matched_keywords[:20],
+            "missing_keywords": missing_keywords[:20]
+        }
