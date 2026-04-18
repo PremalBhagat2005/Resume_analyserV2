@@ -1,125 +1,110 @@
-# Resume Analyser
+# Resume Analyzer V2
 
-An AI-powered web app that analyzes resumes and scores them based on ATS optimization. Upload your resume and get an instant score with actionable feedback.
+Streamlit-based resume analysis app that scores ATS readiness, extracts key resume entities, and optionally compares resume content against a job description.
 
-## What It Does
+## Implemented Features
 
-- **ATS Scoring (0-100)** - Evaluates your resume against 6 key factors
-- **Entity Extraction** - Automatically pulls out contact info, skills, education, and experience
-- **Job Matching** - Compares your resume to job descriptions and shows matching/missing keywords
-- **Dark Theme UI** - Modern, responsive design with instant visual feedback
+- ATS score from 0 to 100 with a 6-part breakdown:
+  - Contact info (20)
+  - Skills section (20)
+  - Education section (15)
+  - Experience section (15)
+  - Action verbs and keywords (20)
+  - Resume length (10)
+- Resume parsing for PDF, DOCX, and TXT
+- Contact extraction (name, email, phone) using regex and heuristics
+- Skills extraction using Hugging Face NER with fallback keyword extraction
+- Education and work experience extraction using structure-based parsing
+- Optional job match scoring with matched and missing keywords
+- Interactive Streamlit dashboard with charts and tabbed results
 
-## Quick Start
+## Requirements
 
-### Prerequisites
 - Python 3.8+
-- Hugging Face API key (free at [huggingface.co](https://huggingface.co))
+- Pip
+- Optional but recommended: Hugging Face API key
 
-### Setup
+## Setup
 
-1. Clone and enter directory:
-   ```bash
-   git clone <repository-url>
-   cd resume-analyser
-   ```
+1. Install dependencies:
 
-2. Create virtual environment:
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate  # Windows
-   source venv/bin/activate  # macOS/Linux
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Create `.env` file:
-   ```env
-   HF_API_KEY=your_hf_token_here
-   FLASK_ENV=development
-   ```
-
-5. Run:
-   ```bash
-   python run.py
-   ```
-
-   Open `http://localhost:5000`
-
-## How Scoring Works
-
-| Factor | Points | What We Check |
-|--------|--------|---------------|
-| Contact Info | 20 | Name, email, phone |
-| Skills Section | 20 | Has dedicated skills with 3+ items |
-| Education | 15 | Degree or certification |
-| Experience | 15 | Work history present |
-| Action Verbs | 20 | Uses power words (managed, developed, etc.) |
-| Length | 10 | Between 300-800 words |
-
-## Tech Stack
-
-- **Backend**: Flask, Python
-- **Parsing**: PyPDF2, python-docx
-- **AI Models**: Hugging Face (NER + semantic similarity)
-- **Frontend**: HTML, CSS (no JavaScript)
-- **Data Analysis**: NumPy, Pandas, Matplotlib
-
-## Project Structure
-
-```
-app/
-├── routes/          # Flask routes
-├── services/        # Core logic (parsing, scoring, analysis)
-├── utils/           # Helper functions
-├── templates/       # HTML pages
-└── static/          # CSS and uploaded files
-
-requirements.txt     # Dependencies
-run.py              # Start here
+```bash
+pip install -r requirements.txt
 ```
 
-## Deployment
+2. Create a .env file (or copy from .env.example):
 
-### Vercel
+```env
+HF_API_KEY=your_hugging_face_api_key_here
+FLASK_ENV=development
+```
 
-1. Push to GitHub
-2. Create new project on [vercel.com](https://vercel.com)
-3. Add `HF_API_KEY` environment variable
-4. Deploy
+Notes:
+- The app uses HF inference APIs when available.
+- If HF calls fail, fallback logic still runs for key parts (skills and job matching).
 
-## Troubleshooting
+3. Start the app:
 
-**"Model is loading" error**
-- First request takes 30-60 seconds
-- App automatically retries
-- It's normal
+```bash
+streamlit run streamlit_app.py
+```
 
-**File upload fails**
-- Max file size: 5MB
-- Supported: PDF, DOCX, TXT
-- Check file isn't corrupted
+4. Open the local URL shown by Streamlit (default is usually http://localhost:8501).
 
-**API key error**
-- Verify key in `.env`
-- Regenerate at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+## How To Use
 
-## Security Notes
+1. Upload a resume file (.pdf, .docx, or .txt)
+2. Optionally enable and paste a job description
+3. Click Analyze Resume
+4. Review four result tabs:
+   - ATS Score
+   - Entity Extraction
+   - Job Match
+   - Suggestions
 
-- `.env` files never committed (check `.gitignore`)
-- Uploaded files deleted after analysis
-- No data stored permanently
-- Input validation on all uploads
+## File Validation
 
-## Future Ideas
+- Supported extensions: pdf, docx, txt
+- Maximum file size: 5 MB
 
-- User dashboard with analysis history
-- Resume templates
-- Multiple resume comparison
-- Cover letter analysis
+## Current Project Structure
+
+```text
+.
+|-- streamlit_app.py
+|-- requirements.txt
+|-- Procfile
+|-- vercel.json
+|-- app/
+|   |-- services/
+|   |   |-- parser.py
+|   |   |-- hf_client.py
+|   |   |-- ats_scorer.py
+|   |   |-- matcher.py
+|   |   |-- experience_extractor.py
+|   |   `-- analytics.py
+|   |-- utils/
+|   |   `-- helpers.py
+|   |-- routes/        (currently empty)
+|   `-- templates/     (currently empty)
+`-- static/
+```
+
+## Deployment Notes
+
+- Procfile starts Streamlit with:
+
+```text
+streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0
+```
+
+- vercel.json routes requests to streamlit_app.py using @vercel/python.
+
+## Known Behavior
+
+- Hugging Face model cold starts can cause temporary delays or 503 responses; retry logic is built in.
+- If model/API calls fail, the app falls back to local keyword/overlap logic where implemented.
 
 ## License
 
-MIT - use freely for personal and commercial projects
+MIT
