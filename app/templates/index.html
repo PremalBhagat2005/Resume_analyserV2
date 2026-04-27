@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI - ATS Resume Analyser{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="hero__badge">AI-Powered · Free · Instant Results</div>
+    <h1 class="hero__title">
+        Know exactly how your<br>
+        <span class="hero__accent">resume performs</span>
+    </h1>
+    <p class="hero__subtitle">
+        Upload your resume for an instant ATS score, skill extraction,
+        work experience detection, and optional job description matching.
+    </p>
+    <div class="hero__stats">
+        <div class="stat">
+            <span class="stat__number">100</span>
+            <span class="stat__label">ATS Score Points</span>
+        </div>
+        <div class="stat__divider"></div>
+        <div class="stat">
+            <span class="stat__number">6</span>
+            <span class="stat__label">Scoring Sections</span>
+        </div>
+        <div class="stat__divider"></div>
+        <div class="stat">
+            <span class="stat__number">AI</span>
+            <span class="stat__label">HuggingFace Powered</span>
+        </div>
+    </div>
+</section>
+
+<section class="upload-section">
+    <div class="upload-card">
+
+        {% if error %}
+        <div class="alert alert--error">
+            <span>!</span> {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/analyse" method="POST"
+              enctype="multipart/form-data">
+
+            <div class="form-group">
+                <label class="form-label">
+                    Upload Resume
+                    <span class="form-label__hint">
+                        PDF · DOCX · TXT &nbsp;·&nbsp; max 5MB
+                    </span>
+                </label>
+                <label class="file-drop" id="fileDropZone">
+                    <input type="file" name="resume"
+                           id="resumeFile"
+                           accept=".pdf,.docx,.txt"
+                           required
+                           class="file-drop__input"/>
+                    <div id="fileDropContent">
+                        <div class="file-drop__icon">FILE</div>
+                        <div class="file-drop__text">
+                            Drop your resume here or
+                            <span class="file-drop__browse">browse</span>
+                        </div>
+                        <div class="file-drop__hint">
+                            Supports PDF, DOCX, TXT
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="jobDesc">
+                    Job Description
+                    <span class="form-label__hint">
+                        Optional - enables match scoring
+                    </span>
+                </label>
+                <textarea name="job_description" id="jobDesc"
+                          class="textarea" rows="5"
+                          placeholder="Paste the job description to see match score and missing keywords..."></textarea>
+            </div>
+
+            <button type="submit"
+                    class="btn btn--primary btn--full"
+                    id="analyseBtn">
+                Analyse Resume 
+            </button>
+
+        </form>
+    </div>
+
+    <aside class="tips-panel">
+        <h3 class="tips-panel__title">How to score higher</h3>
+        <div class="tip-list">
+            <div class="tip">
+                <span class="tip__icon">1</span>
+                <div>
+                    <div class="tip__title">Clear section headers</div>
+                    <div class="tip__desc">
+                        Use: Skills, Experience, Education
+                    </div>
+                </div>
+            </div>
+            <div class="tip">
+                <span class="tip__icon">2</span>
+                <div>
+                    <div class="tip__title">Mirror job keywords</div>
+                    <div class="tip__desc">
+                        Use exact phrases from the job description
+                    </div>
+                </div>
+            </div>
+            <div class="tip">
+                <span class="tip__icon">3</span>
+                <div>
+                    <div class="tip__title">Quantify results</div>
+                    <div class="tip__desc">
+                        "40% faster", "led team of 5"
+                    </div>
+                </div>
+            </div>
+            <div class="tip">
+                <span class="tip__icon">4</span>
+                <div>
+                    <div class="tip__title">300-800 words</div>
+                    <div class="tip__desc">
+                        One page for under 5 years experience
+                    </div>
+                </div>
+            </div>
+            <div class="tip">
+                <span class="tip__icon">5</span>
+                <div>
+                    <div class="tip__title">All contact info</div>
+                    <div class="tip__desc">
+                        Name, email, phone, LinkedIn URL
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+</section>
+
+<script>
+document.getElementById('resumeFile')
+    .addEventListener('change', function() {
+        var content = document.getElementById('fileDropContent');
+        if (this.files.length > 0) {
+            var f = this.files[0];
+            content.innerHTML =
+                '<div class="file-drop__icon">OK</div>' +
+                '<div class="file-drop__text">' + f.name + '</div>' +
+                '<div class="file-drop__hint">' +
+                (f.size / 1024).toFixed(1) + ' KB</div>';
+        }
+    });
+
+// Show loading overlay when form is submitted
+document.querySelector('form').addEventListener('submit', function(e) {
+    showLoadingOverlay();
+});
+</script>
+
+{% endblock %}

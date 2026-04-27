@@ -51,23 +51,114 @@ def clean_text(text):
 
 
 KNOWN_SKILLS = {
-    # Languages
-    "python", "java", "javascript", "c++", "c#", "sql", "r", "go", "rust",
-    "typescript", "kotlin", "swift", "php", "ruby", "scala", "bash",
-    # Web
-    "html", "css", "react", "node", "node.js", "flask", "django", "fastapi",
-    "express", "vue", "angular", "rest", "api", "graphql",
-    # Cloud & DevOps
-    "aws", "gcp", "azure", "docker", "kubernetes", "git", "github", "ci/cd",
-    "google cloud platform", "oracle cloud infrastructure", "vercel",
-    # AI/ML
-    "machine learning", "deep learning", "nlp", "tensorflow", "pytorch",
-    "scikit-learn", "artificial intelligence", "generative", "llm",
-    # Tools
-    "figma", "microsoft excel", "postman", "linux", "mongodb", "postgresql",
-    "mysql", "firebase", "redis",
-    # Soft skills
-    "leadership", "communication", "agile", "scrum",
+    # ── Languages ─────────────────────────────────────────
+    "python", "java", "javascript", "js", "typescript", "ts",
+    "c", "c++", "cpp", "c#", "csharp", "r", "go", "golang",
+    "rust", "bash", "shell", "scala", "kotlin", "swift",
+    "php", "ruby", "matlab", "dart", "perl", "elixir",
+    "haskell", "lua", "groovy", "fortran", "cobol",
+
+    # ── Web Frontend ───────────────────────────────────────
+    "html", "css", "sass", "scss", "less",
+    "react", "reactjs", "react.js",
+    "next.js", "nextjs", "next",
+    "vue", "vuejs", "vue.js",
+    "angular", "angularjs",
+    "svelte", "astro",
+    "tailwind", "tailwindcss", "tailwind css",
+    "bootstrap", "material ui", "chakra ui",
+    "jquery", "webpack", "vite", "parcel", "babel",
+    "redux", "zustand", "mobx",
+
+    # ── Web Backend ────────────────────────────────────────
+    "node", "nodejs", "node.js",
+    "express", "expressjs", "express.js",
+    "flask", "django", "fastapi",
+    "spring", "spring boot", "springboot",
+    "laravel", "rails", "ruby on rails",
+    "nestjs", "nest.js",
+    "graphql", "rest", "restful", "api", "grpc",
+    "websocket", "socket.io",
+
+    # ── Databases ──────────────────────────────────────────
+    "sql", "mysql", "postgresql", "postgres",
+    "sqlite", "oracle", "mssql", "sql server",
+    "mongodb", "mongo", "mongoose",
+    "redis", "memcached",
+    "elasticsearch", "opensearch",
+    "dynamodb", "firestore", "firebase",
+    "cassandra", "couchdb", "neo4j",
+    "supabase", "planetscale", "neon",
+
+    # ── Cloud & DevOps ─────────────────────────────────────
+    "aws", "amazon web services",
+    "gcp", "google cloud", "google cloud platform",
+    "azure", "microsoft azure",
+    "vercel", "netlify", "heroku", "render",
+    "docker", "dockerfile", "containerization",
+    "kubernetes", "k8s",
+    "terraform", "ansible", "puppet", "chef",
+    "ci/cd", "github actions", "gitlab ci",
+    "jenkins", "circleci", "travis ci",
+    "nginx", "apache", "caddy",
+    "linux", "ubuntu", "debian", "centos",
+    "oracle cloud infrastructure",
+
+    # ── Version Control ────────────────────────────────────
+    "git", "github", "gitlab", "bitbucket",
+    "svn", "mercurial",
+
+    # ── Data Science / ML / AI ─────────────────────────────
+    "numpy", "pandas", "matplotlib", "seaborn", "plotly",
+    "scikit-learn", "sklearn",
+    "tensorflow", "tf", "keras",
+    "pytorch", "torch",
+    "opencv", "cv2",
+    "nltk", "spacy", "gensim", "transformers",
+    "huggingface", "hugging face",
+    "langchain", "llamaindex",
+    "machine learning", "ml",
+    "deep learning", "dl",
+    "nlp", "natural language processing",
+    "computer vision", "cv",
+    "data science", "data analysis", "data engineering",
+    "artificial intelligence", "ai",
+    "generative ai", "gen ai", "llm",
+    "reinforcement learning",
+    "xgboost", "lightgbm", "catboost",
+    "jupyter", "google colab", "colab",
+
+    # ── Tools & Platforms ──────────────────────────────────
+    "figma", "sketch", "adobe xd",
+    "vs code", "vscode", "visual studio",
+    "intellij", "pycharm", "webstorm",
+    "postman", "insomnia", "swagger",
+    "jira", "confluence", "notion",
+    "slack", "trello", "asana",
+    "microsoft excel", "excel",
+    "powerpoint", "word",
+    "linux terminal", "ubuntu",
+    "android studio", "xcode",
+
+    # ── Mobile ─────────────────────────────────────────────
+    "react native", "flutter", "ionic",
+    "android", "ios", "swift", "kotlin",
+
+    # ── Blockchain / Web3 ──────────────────────────────────
+    "solidity", "web3", "web3.js", "ethers.js",
+    "blockchain", "smart contracts",
+
+    # ── Testing ────────────────────────────────────────────
+    "jest", "mocha", "chai", "cypress",
+    "pytest", "unittest", "selenium",
+    "playwright", "puppeteer",
+
+    # ── Soft Skills ────────────────────────────────────────
+    "leadership", "communication", "teamwork",
+    "team collaboration", "problem solving",
+    "adaptability", "agile", "scrum", "kanban",
+    "time management", "critical thinking",
+    "public speaking", "project management",
 }
 
 NOISE_WORDS = {
@@ -87,12 +178,42 @@ NOISE_WORDS = {
 
 
 def extract_skills_from_keywords(keywords: list) -> list:
-    """Filter raw NER keywords down to recognised tech/professional skills."""
+    """
+    Match raw NER keywords against KNOWN_SKILLS.
+    Handles: exact match, lowercase, partial containment.
+    """
     skills = []
     for kw in keywords:
-        if kw.lower().strip() in KNOWN_SKILLS:
-            skills.append(kw)
-    return sorted(set(skills))
+        kw_clean = kw.strip()
+        kw_lower = kw_clean.lower()
+
+        # 1. Exact lowercase match
+        if kw_lower in KNOWN_SKILLS:
+            skills.append(kw_clean)
+            continue
+
+        # 2. Check if any known skill is fully contained
+        #    in the keyword or vice versa (handles "Node.js" -> "node")
+        matched = False
+        for known in KNOWN_SKILLS:
+            if len(known) >= 2 and (
+                known in kw_lower or
+                kw_lower in known
+            ):
+                skills.append(kw_clean)
+                matched = True
+                break
+
+    # Deduplicate preserving order, normalise to title case
+    seen = set()
+    result = []
+    for s in skills:
+        key = s.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(s)
+
+    return sorted(result, key=lambda x: x.lower())
 
 
 def clean_keywords(keywords: list) -> list:

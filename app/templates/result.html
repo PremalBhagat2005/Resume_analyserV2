@@ -1,0 +1,880 @@
+{% extends "base.html" %}
+{% block title %}Results - ResumeAI{% endblock %}
+
+{% block content %}
+
+<div class="result-header">
+    <div>
+        <div class="result-header__file">FILE {{ filename }}</div>
+        <h1 class="result-header__title">Analysis Complete</h1>
+    </div>
+    <a href="/" class="btn btn--outline"><- Analyse Another</a>
+</div>
+
+<div class="tabs" id="tabNav">
+    <button class="tab tab--active" data-tab="ats">
+        ATS Score
+    </button>
+    <button class="tab" data-tab="entities">
+        Entity Extraction
+    </button>
+    <button class="tab" data-tab="jobmatch">
+        Job Match
+        {% if not job_match %}
+        <span class="tab__badge">-</span>
+        {% endif %}
+    </button>
+    <button class="tab" data-tab="feedback">
+        Feedback & Tips
+    </button>
+</div>
+
+<div class="tab-panel tab-panel--active" id="tab-ats">
+    <div class="ats-layout">
+
+        <div class="score-card">
+            <div class="score-ring score-ring--{{ score_class }}">
+                <div>
+                    <div class="score-ring__number">{{ score }}</div>
+                    <div class="score-ring__denom">/100</div>
+                </div>
+            </div>
+            <span class="score-band score-band--{{ score_class }}">
+                {{ score_band }}
+            </span>
+            <p class="score-words">
+                {{ word_count }} words ·
+                {% if 300 <= word_count <= 800 %}
+                <span class="text-green">good length</span>
+                {% else %}
+                <span class="text-amber">aim for 300-800</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="breakdown-card">
+            <h2 class="card-title">Score Breakdown</h2>
+            {% for category, values in breakdown.items() %}
+            {% if values is mapping %}
+                {% set earned = values.get('earned', 0) %}
+                {% set total  = values.get('total', 1)  %}
+            {% else %}
+                {% set earned = values %}
+                {% set total  = 20 %}
+            {% endif %}
+            {% set pct = ((earned / total) * 100) | int
+                         if total else 0 %}
+            <div class="breakdown-row">
+                <span class="breakdown-row__name">
+                    {{ category }}
+                </span>
+                <div class="breakdown-row__track">
+                    <div class="breakdown-row__fill
+                        {% if pct >= 80 %}fill--green
+                        {% elif pct >= 50 %}fill--blue
+                        {% elif pct >= 30 %}fill--amber
+                        {% else %}fill--red{% endif %}"
+                        style="width:{{ pct }}%">
+                    </div>
+                </div>
+                <span class="breakdown-row__score">
+                    {{ earned }}/{{ total }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- ── Visual Insights ──────────────────────────────── -->
+    <div class="insights-section">
+        <h2 class="insights-title">Visual Insights</h2>
+
+        <div class="charts-grid">
+
+            <!-- Chart 1: ATS Breakdown bars -->
+            <div class="chart-card">
+                <h3 class="chart-card__title">ATS Score Breakdown</h3>
+                <div class="css-chart">
+                    {% for category, values in breakdown.items() %}
+                    {% if values is mapping %}
+                        {% set earned = values.get('earned', 0) %}
+                        {% set total  = values.get('total', 1)  %}
+                    {% else %}
+                        {% set earned = values %}
+                        {% set total  = 20 %}
+                    {% endif %}
+                    {% set pct = ((earned / total) * 100) | int
+                                 if total else 0 %}
+                    <div class="css-bar-row">
+                        <span class="css-bar-label">{{ category }}</span>
+                        <div class="css-bar-track">
+                            <div class="css-bar-fill
+                                {% if pct >= 80 %}fill--green
+                                {% elif pct >= 50 %}fill--blue
+                                {% elif pct >= 30 %}fill--amber
+                                {% else %}fill--red{% endif %}"
+                                style="width: {{ pct }}%;">
+                            </div>
+                        </div>
+                        <span class="css-bar-value">
+                            {{ earned }}/{{ total }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Chart 2: Score gauge ring -->
+            <div class="chart-card">
+                <h3 class="chart-card__title">Overall Score</h3>
+                <div class="gauge-wrap">
+                    <div class="gauge-ring gauge-ring--{{ score_class }}"
+                         style="--pct: {{ score }};">
+                        <div class="gauge-ring__inner">
+                            <span class="gauge-ring__number">{{ score }}</span>
+                            <span class="gauge-ring__denom">/100</span>
+                        </div>
+                    </div>
+                    <span class="score-band score-band--{{ score_class }}">
+                        {{ score_band }}
+                    </span>
+                    <div class="gauge-legend">
+                        {% for category, values in breakdown.items() %}
+                        {% if values is mapping %}
+                            {% set earned = values.get('earned', 0) %}
+                            {% set total  = values.get('total', 1)  %}
+                        {% else %}
+                            {% set earned = values %}
+                            {% set total  = 20 %}
+                        {% endif %}
+                        <div class="gauge-legend__row">
+                            <span class="gauge-legend__dot
+                                {% if ((earned/total*100)|int) >= 80 %}dot--green
+                                {% elif ((earned/total*100)|int) >= 50 %}dot--blue
+                                {% elif ((earned/total*100)|int) >= 30 %}dot--amber
+                                {% else %}dot--red{% endif %}">
+                            </span>
+                            <span class="gauge-legend__name">
+                                {{ category }}
+                            </span>
+                            <span class="gauge-legend__score">
+                                {{ earned }}/{{ total }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Readability Analysis ──────────────────────── -->
+    {% if readability_result %}
+    <div class="analysis-section">
+        <h2 class="section-title">Readability & Scannability</h2>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-card__label">Readability Score</div>
+                <div class="metric-card__value
+                    {% if readability_result.score >= 80 %}score-band--excellent
+                    {% elif readability_result.score >= 60 %}score-band--good
+                    {% elif readability_result.score >= 40 %}score-band--fair
+                    {% else %}score-band--poor{% endif %}">
+                    {{ readability_result.score }}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card__label">Grade</div>
+                <div class="metric-card__value metric-grade">
+                    {{ readability_result.grade }}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card__label">Avg Sentence Length</div>
+                <div class="metric-card__value">
+                    {{ readability_result.avg_sentence_length }} words
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-card__label">Active Voice</div>
+                <div class="metric-card__value">
+                    {{ readability_result.active_voice_pct }}%
+                </div>
+            </div>
+        </div>
+
+        {% if readability_result.feedback %}
+        <div class="card">
+            <h3 class="card-title">Feedback</h3>
+            <ul class="feedback-list">
+                {% for fb in readability_result.feedback %}
+                <li class="feedback-item">{{ fb }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="tab-panel" id="tab-entities">
+
+
+    <!-- ── Industry Detection ──────────────────────── -->
+    {% if industry_result %}
+    <h2 class="section-title">Detected Industry & Role</h2>
+    <div class="industry-section">
+        <div class="industry-primary">
+            <div class="industry-badge">
+                <div class="industry-badge__label">Primary Industry</div>
+                <div class="industry-badge__value">{{ industry_result.primary }}</div>
+                <div class="industry-badge__confidence
+                    {% if industry_result.confidence == 'High' %}conf--high
+                    {% elif industry_result.confidence == 'Medium' %}conf--medium
+                    {% else %}conf--low{% endif %}">
+                    {{ industry_result.confidence }} confidence
+                </div>
+            </div>
+        </div>
+
+        <div class="industry-secondary">
+            <span class="industry-badge--sm">
+                <strong>Secondary:</strong> {{ industry_result.secondary }}
+            </span>
+        </div>
+
+        {% if industry_result.scores %}
+        <div class="card">
+            <h3 class="card-title">Industry Scores</h3>
+            <div class="score-bars-sm">
+                {% for industry, score in (industry_result.scores.items() | sort(attribute='1', reverse=True))[:5] %}
+                <div class="score-bar-sm">
+                    <span class="score-bar-sm__label">{{ industry }}</span>
+                    <div class="score-bar-sm__track">
+                        <div class="score-bar-sm__fill" style="width: {{ (score / industry_result.scores.values() | max * 100) | int }}%"></div>
+                    </div>
+                    <span class="score-bar-sm__value">{{ "%.1f"|format(score) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <h2 class="section-title">Contact Information</h2>
+    <div class="contact-grid">
+        {% for label, value in [
+            ("Name",  name),
+            ("Email", email),
+            ("Phone", phone)
+        ] %}
+        <div class="contact-card">
+            <div class="contact-card__label">{{ label }}</div>
+            <div class="contact-card__value">
+                {{ value or "Not detected" }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="section-title">Technical Skills</h2>
+    <div class="card">
+        {% if extracted_skills %}
+        <div class="pill-wrap">
+            {% for s in extracted_skills %}
+            <span class="pill pill--skill">{{ s }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-msg">No recognised skills detected.</p>
+        {% endif %}
+    </div>
+
+    <h2 class="section-title">Extracted Keywords</h2>
+    <div class="card">
+        {% if extracted_keywords %}
+        <div class="pill-wrap">
+            {% for k in extracted_keywords %}
+            <span class="pill pill--keyword">{{ k }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-msg">No keywords extracted.</p>
+        {% endif %}
+    </div>
+
+    <h2 class="section-title">Work Experience</h2>
+    {% if work_experience %}
+        {% for exp in work_experience %}
+        <div class="timeline-card timeline-card--blue">
+            <div class="timeline-card__header">
+                <div>
+                    <div class="timeline-card__title">
+                        {{ exp.title or "Role" }}
+                    </div>
+                    {% if exp.company %}
+                    <div class="timeline-card__sub">
+                        {{ exp.company }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if exp.duration %}
+                <span class="timeline-card__date">
+                    {{ exp.duration }}
+                </span>
+                {% endif %}
+            </div>
+            {% if exp.description %}
+            <p class="timeline-card__desc">
+                {{ exp.description }}
+            </p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="card">
+        <p class="empty-msg">
+            No work experience detected.
+        </p>
+    </div>
+    {% endif %}
+
+    <h2 class="section-title">Education</h2>
+    {% if education %}
+        {% for edu in education %}
+        <div class="timeline-card timeline-card--purple">
+            <div class="timeline-card__header">
+                <div>
+                    <div class="timeline-card__title">
+                        {{ edu.institution or "Institution" }}
+                    </div>
+                    {% if edu.degree %}
+                    <div class="timeline-card__sub">
+                        {{ edu.degree }}
+                    </div>
+                    {% endif %}
+                    {% if edu.location %}
+                    <div class="timeline-card__location">
+                        Location: {{ edu.location }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if edu.year %}
+                <span class="timeline-card__date">
+                    {{ edu.year }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="card">
+        <p class="empty-msg">No education detected.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="tab-panel" id="tab-jobmatch">
+{% if job_match %}
+    {% set ms = job_match.match_score %}
+    {% if ms >= 80 %}
+        {% set ms_class = "excellent" %}
+        {% set ms_band  = "Excellent Match" %}
+    {% elif ms >= 60 %}
+        {% set ms_class = "good" %}
+        {% set ms_band  = "Good Match" %}
+    {% elif ms >= 40 %}
+        {% set ms_class = "fair" %}
+        {% set ms_band  = "Moderate Match" %}
+    {% else %}
+        {% set ms_class = "poor" %}
+        {% set ms_band  = "Low Match" %}
+    {% endif %}
+
+    <div class="match-hero">
+        <div class="match-hero__score-wrap">
+            <div class="match-hero__score
+                        score-ring__number
+                        score-band--{{ ms_class }}">
+                {{ ms }}
+            </div>
+            <div class="match-hero__denom">/ 100</div>
+        </div>
+        <div class="match-hero__info">
+            <span class="score-band score-band--{{ ms_class }}">
+                {{ ms_band }}
+            </span>
+            <div class="match-hero__bar-track">
+                <div class="match-hero__bar
+                    {% if ms >= 80 %}fill--green
+                    {% elif ms >= 60 %}fill--blue
+                    {% elif ms >= 40 %}fill--amber
+                    {% else %}fill--red{% endif %}"
+                    style="width:{{ ms }}%">
+                </div>
+            </div>
+            <p class="match-hero__feedback">
+                {{ job_match.feedback }}
+            </p>
+        </div>
+    </div>
+
+    <div class="match-keywords-grid">
+        <div class="card">
+            <h3 class="card-title card-title--green">
+                Matched
+                <span class="count-badge count-badge--green">
+                    {{ job_match.matched_keywords | length }}
+                </span>
+            </h3>
+            {% if job_match.matched_keywords %}
+            <div class="pill-wrap">
+                {% for kw in job_match.matched_keywords %}
+                <span class="pill pill--matched">{{ kw }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-msg">No matched keywords.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3 class="card-title card-title--red">
+                Missing
+                <span class="count-badge count-badge--red">
+                    {{ job_match.missing_keywords | length }}
+                </span>
+            </h3>
+            {% if job_match.missing_keywords %}
+            <div class="pill-wrap">
+                {% for kw in job_match.missing_keywords %}
+                <span class="pill pill--missing">{{ kw }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-msg" style="color:var(--green)">
+                Resume covers all key job terms.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state__icon">Job</div>
+        <h3 class="empty-state__title">
+            No Job Description Provided
+        </h3>
+        <p class="empty-state__desc">
+            Go back and paste a job description to see
+            how well your resume matches the role.
+        </p>
+        <a href="/" class="btn btn--primary">
+            Try with Job Description
+        </a>
+    </div>
+{% endif %}
+
+    <!-- ── Role-Specific ATS Adjustment ────────────────────────── -->
+    {% if role_ats %}
+    <div class="analysis-section" style="margin-top: 2rem;">
+        <h2 class="section-title">Role-Specific ATS Adjustment</h2>
+        
+        <div class="score-comparison">
+            <div class="comparison-card">
+                <div class="comparison-card__label">Base ATS Score</div>
+                <div class="comparison-card__score">{{ role_ats.base_score }}</div>
+            </div>
+            <div class="comparison-arrow">→</div>
+            <div class="comparison-card">
+                <div class="comparison-card__label">Adjusted Score</div>
+                <div class="comparison-card__score
+                    {% if role_ats.adjustment > 0 %}score-band--green
+                    {% elif role_ats.adjustment < 0 %}score-band--red
+                    {% else %}score-band--blue{% endif %}">
+                    {{ role_ats.adjusted_score }}
+                    <span class="adjustment-badge
+                        {% if role_ats.adjustment > 0 %}badge--positive
+                        {% elif role_ats.adjustment < 0 %}badge--negative
+                        {% else %}badge--neutral{% endif %}">
+                        {{ "%+d"|format(role_ats.adjustment) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">JD Keyword Coverage</h3>
+            <div class="coverage-info">
+                <div class="coverage-stat">
+                    <span class="coverage-stat__label">Keywords Matched</span>
+                    <span class="coverage-stat__value">
+                        {{ role_ats.matched_jd_kw|length }} / {{ role_ats.jd_keywords|length }}
+                    </span>
+                </div>
+                <div class="coverage-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ role_ats.coverage_pct }}%"></div>
+                    </div>
+                    <span class="coverage-pct">{{ role_ats.coverage_pct }}%</span>
+                </div>
+            </div>
+        </div>
+
+        {% if role_ats.recommendation %}
+        <div class="card card--info">
+            <h3 class="card-title">Recommendation</h3>
+            <p class="recommendation-text">{{ role_ats.recommendation }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── Keyword Gap Analysis ────────────────────────────────── -->
+    {% if keyword_gaps %}
+    <div class="analysis-section" style="margin-top: 2rem;">
+        <h2 class="section-title">Keyword Gap Analysis</h2>
+
+        <div class="keywords-categories">
+            {% for category, keywords in [
+                ("Technical Skills", keyword_gaps.technical),
+                ("Soft Skills", keyword_gaps.soft_skills),
+                ("Tools & Platforms", keyword_gaps.tools),
+                ("Domain Knowledge", keyword_gaps.domain)
+            ] %}
+            {% if keywords %}
+            <div class="keywords-category">
+                <h3 class="category-title">{{ category }}</h3>
+                <div class="pill-wrap">
+                    {% for kw in keywords %}
+                    <span class="pill pill--gap">{{ kw }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if keyword_gaps.simulation %}
+        <div class="card">
+            <h3 class="card-title">Score Projection</h3>
+            <div class="projection-grid">
+                <div class="projection-card">
+                    <div class="projection-card__label">Current Score</div>
+                    <div class="projection-card__value">
+                        {{ keyword_gaps.simulation.current_score }}
+                    </div>
+                </div>
+                <div class="projection-card projection-card--highlight">
+                    <div class="projection-card__label">With Missing Keywords</div>
+                    <div class="projection-card__value projection-potential">
+                        {{ keyword_gaps.simulation.potential_score }}
+                        <span class="potential-gain">
+                            +{{ keyword_gaps.simulation.score_gain }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if keyword_gaps.simulation.keywords_to_add %}
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <p class="small-label">Top Keywords to Add:</p>
+                <div class="pill-wrap">
+                    {% for kw in (keyword_gaps.simulation.keywords_to_add)[:8] %}
+                    <span class="pill pill--suggest">{{ kw }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="tab-panel" id="tab-feedback">
+    <!-- Formatting & Structure -->
+    {% if formatting_result %}
+    <div style="max-width:900px; margin:0 auto; padding:8px 0;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+            <div style="width:4px; height:24px; background:linear-gradient(180deg,#f87171,#fb923c); border-radius:2px;"></div>
+            <h3 style="margin:0; font-family:Syne,sans-serif; font-size:18px; font-weight:700; color:#f1f5f9;">Issues Found</h3>
+            <span id="issueCountBadge" style="background:rgba(248,113,113,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.3); border-radius:20px; padding:2px 12px; font-size:12px; font-weight:700;">0</span>
+        </div>
+
+        <div id="issuesContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+        <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(99,179,237,0.2),transparent); margin:28px 0;"></div>
+
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+            <div style="width:4px; height:24px; background:linear-gradient(180deg,#34d399,#4fd1c5); border-radius:2px;"></div>
+            <h3 style="margin:0; font-family:Syne,sans-serif; font-size:18px; font-weight:700; color:#f1f5f9;">Strengths</h3>
+            <span id="strengthCountBadge" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); border-radius:20px; padding:2px 12px; font-size:12px; font-weight:700;">0</span>
+        </div>
+
+        <div id="strengthsContainer" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
+    </div>
+    {% endif %}
+
+    {% if section_feedback %}
+    <div class="feedback-sections">
+        <!-- Contact Info Feedback -->
+        {% if section_feedback.contact %}
+        <div class="feedback-section">
+            <div class="feedback-section__header">
+                <h3 class="feedback-section__title">Contact Information</h3>
+                <span class="feedback-section__status
+                    {% if section_feedback.contact.status == 'Good' %}status--good
+                    {% elif section_feedback.contact.status == 'Fair' %}status--fair
+                    {% else %}status--needs-work{% endif %}">
+                    {{ section_feedback.contact.status }}
+                </span>
+            </div>
+            {% if section_feedback.contact.tips %}
+            <ul class="feedback-tips">
+                {% for tip in section_feedback.contact.tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Experience Feedback -->
+        {% if section_feedback.experience %}
+        <div class="feedback-section">
+            <div class="feedback-section__header">
+                <h3 class="feedback-section__title">Work Experience</h3>
+                <span class="feedback-section__status
+                    {% if section_feedback.experience.status == 'Good' %}status--good
+                    {% elif section_feedback.experience.status == 'Fair' %}status--fair
+                    {% else %}status--needs-work{% endif %}">
+                    {{ section_feedback.experience.status }}
+                </span>
+            </div>
+            {% if section_feedback.experience.tips %}
+            <ul class="feedback-tips">
+                {% for tip in section_feedback.experience.tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Education Feedback -->
+        {% if section_feedback.education %}
+        <div class="feedback-section">
+            <div class="feedback-section__header">
+                <h3 class="feedback-section__title">Education</h3>
+                <span class="feedback-section__status
+                    {% if section_feedback.education.status == 'Good' %}status--good
+                    {% elif section_feedback.education.status == 'Fair' %}status--fair
+                    {% else %}status--needs-work{% endif %}">
+                    {{ section_feedback.education.status }}
+                </span>
+            </div>
+            {% if section_feedback.education.tips %}
+            <ul class="feedback-tips">
+                {% for tip in section_feedback.education.tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Skills Feedback -->
+        {% if section_feedback.skills %}
+        <div class="feedback-section">
+            <div class="feedback-section__header">
+                <h3 class="feedback-section__title">Skills</h3>
+                <span class="feedback-section__status
+                    {% if section_feedback.skills.status == 'Good' %}status--good
+                    {% elif section_feedback.skills.status == 'Fair' %}status--fair
+                    {% else %}status--needs-work{% endif %}">
+                    {{ section_feedback.skills.status }}
+                </span>
+            </div>
+            {% if section_feedback.skills.tips %}
+            <ul class="feedback-tips">
+                {% for tip in section_feedback.skills.tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Summary Feedback -->
+        {% if section_feedback.summary %}
+        <div class="feedback-section">
+            <div class="feedback-section__header">
+                <h3 class="feedback-section__title">Professional Summary</h3>
+                <span class="feedback-section__status
+                    {% if section_feedback.summary.status == 'Good' %}status--good
+                    {% elif section_feedback.summary.status == 'Fair' %}status--fair
+                    {% else %}status--needs-work{% endif %}">
+                    {{ section_feedback.summary.status }}
+                </span>
+            </div>
+            {% if section_feedback.summary.tips %}
+            <ul class="feedback-tips">
+                {% for tip in section_feedback.summary.tips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Overall Feedback -->
+        {% if section_feedback.overall %}
+        <div class="overall-feedback">
+            <h3 class="overall-feedback__title">Overall Recommendations</h3>
+            <ul class="overall-tips">
+                {% for rec in section_feedback.overall %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state__icon">OK</div>
+        <h3 class="empty-state__title">
+            No feedback available
+        </h3>
+        <p class="empty-state__desc">
+            Your resume passed all checks!
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.feedback-card {
+    animation: fadeSlideUp 0.4s ease both;
+}
+
+#issuesContainer .feedback-card:nth-child(1),
+#strengthsContainer .feedback-card:nth-child(1) { animation-delay: 0.05s; }
+#issuesContainer .feedback-card:nth-child(2),
+#strengthsContainer .feedback-card:nth-child(2) { animation-delay: 0.10s; }
+#issuesContainer .feedback-card:nth-child(3),
+#strengthsContainer .feedback-card:nth-child(3) { animation-delay: 0.15s; }
+#issuesContainer .feedback-card:nth-child(4),
+#strengthsContainer .feedback-card:nth-child(4) { animation-delay: 0.20s; }
+#issuesContainer .feedback-card:nth-child(5),
+#strengthsContainer .feedback-card:nth-child(5) { animation-delay: 0.25s; }
+#issuesContainer .feedback-card:nth-child(6),
+#strengthsContainer .feedback-card:nth-child(6) { animation-delay: 0.30s; }
+#issuesContainer .feedback-card:nth-child(7),
+#strengthsContainer .feedback-card:nth-child(7) { animation-delay: 0.35s; }
+#issuesContainer .feedback-card:nth-child(8),
+#strengthsContainer .feedback-card:nth-child(8) { animation-delay: 0.40s; }
+#issuesContainer .feedback-card:nth-child(9),
+#strengthsContainer .feedback-card:nth-child(9) { animation-delay: 0.45s; }
+#issuesContainer .feedback-card:nth-child(10),
+#strengthsContainer .feedback-card:nth-child(10) { animation-delay: 0.50s; }
+
+@media (max-width: 680px) {
+    #strengthsContainer {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+<script>
+document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.tab')
+            .forEach(function(t) {
+                t.classList.remove('tab--active');
+            });
+        document.querySelectorAll('.tab-panel')
+            .forEach(function(p) {
+                p.classList.remove('tab-panel--active');
+            });
+        tab.classList.add('tab--active');
+        document.getElementById('tab-' + tab.dataset.tab)
+            .classList.add('tab-panel--active');
+    });
+});
+
+{% if formatting_result %}
+(function() {
+    var feedback = {
+        formatting_score: {{ formatting_result.score|default(0)|int }},
+        issues: {{ (formatting_result.issues|default([]))|tojson }},
+        strengths: {{ (formatting_result.passes|default([]))|tojson }}
+    };
+
+    var issues = feedback.issues || [];
+    var strengths = feedback.strengths || [];
+
+    var issueCountBadgeEl = document.getElementById('issueCountBadge');
+    var strengthCountBadgeEl = document.getElementById('strengthCountBadge');
+    var issuesContainer = document.getElementById('issuesContainer');
+    var strengthsContainer = document.getElementById('strengthsContainer');
+
+    if (!issueCountBadgeEl || !strengthCountBadgeEl || !issuesContainer || !strengthsContainer) {
+        return;
+    }
+
+    var escapeHtml = function(text) {
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    };
+
+    issueCountBadgeEl.textContent = String(issues.length);
+    strengthCountBadgeEl.textContent = String(strengths.length);
+
+    issuesContainer.innerHTML = issues.map(function(issue) {
+        return '<div class="feedback-card" style="display:flex; align-items:flex-start; gap:14px; background:linear-gradient(135deg, rgba(248,113,113,0.05) 0%, rgba(17,24,39,0.8) 100%); border:1px solid rgba(248,113,113,0.2); border-left:3px solid #f87171; border-radius:12px; padding:14px 18px; transition:all 0.25s ease;" onmouseover="this.style.background=\'linear-gradient(135deg,rgba(248,113,113,0.1) 0%,rgba(17,24,39,0.9) 100%)\';this.style.borderColor=\'rgba(248,113,113,0.4)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 20px rgba(248,113,113,0.1)\'" onmouseout="this.style.background=\'linear-gradient(135deg,rgba(248,113,113,0.05) 0%,rgba(17,24,39,0.8) 100%)\';this.style.borderColor=\'rgba(248,113,113,0.2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">' +
+            '<div style="width:28px; height:28px; border-radius:50%; flex-shrink:0; margin-top:1px; background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.4); display:flex; align-items:center; justify-content:center; font-size:13px;">!</div>' +
+            '<p style="margin:0; font-size:13.5px; color:#cbd5e1; line-height:1.6; font-family:\'DM Sans\',sans-serif;">' + escapeHtml(issue) + '</p>' +
+        '</div>';
+    }).join('');
+
+    strengthsContainer.innerHTML = strengths.map(function(strength) {
+        return '<div class="feedback-card" style="display:flex; align-items:center; gap:14px; background:linear-gradient(135deg, rgba(52,211,153,0.05) 0%, rgba(17,24,39,0.8) 100%); border:1px solid rgba(52,211,153,0.2); border-left:3px solid #34d399; border-radius:12px; padding:14px 18px; transition:all 0.25s ease; cursor:default;" onmouseover="this.style.background=\'linear-gradient(135deg,rgba(52,211,153,0.1) 0%,rgba(17,24,39,0.9) 100%)\';this.style.borderColor=\'rgba(52,211,153,0.45)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 24px rgba(52,211,153,0.12)\'" onmouseout="this.style.background=\'linear-gradient(135deg,rgba(52,211,153,0.05) 0%,rgba(17,24,39,0.8) 100%)\';this.style.borderColor=\'rgba(52,211,153,0.2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">' +
+            '<div style="width:28px; height:28px; border-radius:50%; flex-shrink:0; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.4); display:flex; align-items:center; justify-content:center; font-size:13px;">✓</div>' +
+            '<p style="margin:0; font-size:13.5px; color:#cbd5e1; line-height:1.5; font-family:\'DM Sans\',sans-serif;">' + escapeHtml(strength) + '</p>' +
+        '</div>';
+    }).join('');
+
+    if (issues.length === 0) {
+        issuesContainer.innerHTML = '<p style="color:#64748b; font-style:italic; margin:0;">No issues detected.</p>';
+    }
+
+    if (strengths.length === 0) {
+        strengthsContainer.innerHTML = '<p style="color:#64748b; font-style:italic; margin:0;">No specific strengths detected.</p>';
+    }
+})();
+{% endif %}
+</script>
+
+{% endblock %}

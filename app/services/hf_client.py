@@ -14,6 +14,69 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 
 
+def hf_post_with_retry(api_url, payload, headers, max_wait=60):
+    """
+    POST to HF API with retry logic for model cold start (503 loading).
+    Retries up to max_wait seconds total.
+    
+    Args:
+        api_url: Full HF API URL
+        payload: Request payload dict
+        headers: HTTP headers dict
+        max_wait: Maximum total seconds to retry
+    
+    Returns:
+        requests.Response object or None if all retries failed
+    """
+    start = time.time()
+    attempt = 0
+
+    while time.time() - start < max_wait:
+        attempt += 1
+        try:
+            resp = requests.post(
+                api_url,
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+
+            if resp.status_code == 200:
+                return resp
+
+            if resp.status_code == 503:
+                body = {}
+                try:
+                    body = resp.json()
+                except Exception:
+                    pass
+
+                estimated_wait = body.get('estimated_time', 10)
+                estimated_wait = min(float(estimated_wait), 20)
+
+                elapsed = time.time() - start
+                print(f"[HF] Model loading (503), waiting {estimated_wait:.0f}s "
+                      f"(attempt {attempt}, elapsed {elapsed:.0f}s)")
+                time.sleep(estimated_wait)
+                continue
+
+            # Other error — return immediately
+            print(f"[HF] Non-retryable error: {resp.status_code} {resp.text[:200]}")
+            return resp
+
+        except requests.exceptions.Timeout:
+            print(f"[HF] Timeout on attempt {attempt}")
+            time.sleep(5)
+            continue
+        except Exception as e:
+            print(f"[HF] Request exception: {e}")
+            return None
+
+    elapsed = time.time() - start
+    print(f"[HF] Gave up after {elapsed:.0f}s")
+    return None
+
+
 def get_headers():
     """Get headers for HF API requests."""
     return {
@@ -263,6 +326,94 @@ def extract_skills_fallback(text: str) -> list:
     return found_skills[:15]  # Return top 15
 
 
+def get_semantic_similarity(text_a, text_b):
+    """
+    Compute semantic similarity between two text inputs.
+    Returns a float between 0 and 1, or None on failure.
+    """
+    api_url = "https://api-inference.huggingface.co/models/anass1209/resume-job-matcher-all-MiniLM-L6-v2"
+    headers = {"Authorization": f"Bearer {os.getenv('HF_API_KEY')}"}
+
+    try:
+        response = hf_post_with_retry(
+            api_url,
+            {
+                "inputs": {
+                    "source_sentence": (text_a or "")[:1024],
+                    "sentences": [(text_b or "")[:1024]]
+                }
+            },
+            headers,
+            max_wait=60
+        )
+        
+        if response is None or response.status_code != 200:
+            print(f"[Semantic] API error: {response.status_code if response else 'No response'}")
+            return None
+
+        result = response.json()
+        if isinstance(result, list) and len(result) > 0:
+            value = result[0]
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            return round(float(value), 4)
+
+        if isinstance(result, dict):
+            for key in ["similarity", "score", "cosine_similarity"]:
+                if key in result:
+                    return round(float(result[key]), 4)
+
+        return None
+    except Exception as e:
+        print(f"[Semantic] Error: {e}")
+        return None
+
+
+def get_section_similarities(resume_sections, jd_text):
+    """
+    Compare each resume section with the job description.
+    Returns dict: section_name -> similarity score.
+    """
+    results = {}
+    for section_name, section_text in (resume_sections or {}).items():
+        if not section_text or not str(section_text).strip():
+            continue
+        score = get_semantic_similarity(str(section_text), jd_text)
+        if score is not None:
+            results[section_name] = score
+    return results
+
+
+def get_requirement_coverage(jd_requirements, resume_text):
+    """
+    Score JD requirement lines against resume text.
+    Levels: strong (>=0.70), partial (0.40-0.69), missing (<0.40)
+    """
+    results = []
+    for req in jd_requirements or []:
+        req = str(req).strip()
+        if len(req) < 20:
+            continue
+
+        score = get_semantic_similarity((resume_text or "")[:1024], req)
+        if score is None:
+            continue
+
+        if score >= 0.70:
+            level = "strong"
+        elif score >= 0.40:
+            level = "partial"
+        else:
+            level = "missing"
+
+        results.append({
+            "requirement": req,
+            "score": score,
+            "level": level
+        })
+    return results
+
+
 def extract_education_fallback(text: str) -> list:
     """Extract education entries using strict section-based parsing."""
     lines = [l.strip() for l in (text or '').split('\n') if l.strip()]
@@ -442,6 +593,24 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
         print(f"[DEBUG NER] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
         print(f"[DEBUG NER] Extracted skills via fallback: {len(entities['skills'])} skills found")
         return entities
+
+
+def call_ner_model(resume_text: str) -> Dict[str, Any]:
+    """
+    Backward-compatible NER API used by older route handlers.
+
+    Current extraction returns `skills`; legacy callers expect `keywords`.
+    """
+    entities = extract_entities(resume_text)
+    return {
+        "name": entities.get("name"),
+        "email": entities.get("email"),
+        "phone": entities.get("phone"),
+        "keywords": entities.get("skills", []),
+        "skills": entities.get("skills", []),
+        "education": entities.get("education", []),
+        "experience": entities.get("experience", []),
+    }
 
 
 def get_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:

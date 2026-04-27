@@ -1,0 +1,9 @@
+import os
+
+from app import create_app
+
+app = create_app()
+
+if __name__ == "__main__":
+    debug_mode = os.getenv("FLASK_ENV", "development").lower() == "development"
+    app.run(debug=debug_mode, use_reloader=False, threaded=True)

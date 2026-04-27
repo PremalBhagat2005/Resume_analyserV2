@@ -1,17 +1,5 @@
 {
-  "builds": [
-    {
-      "src": "streamlit_app.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "streamlit_app.py"
-    }
-  ],
-  "env": {
-    "PYTHONUNBUFFERED": "1"
-  }
+    "version": 2,
+    "builds": [{ "src": "run.py", "use": "@vercel/python" }],
+    "routes": [{ "src": "/(.*)", "dest": "run.py" }]
 }

@@ -1,4 +1,5 @@
 import io
+import os
 import re
 from PyPDF2 import PdfReader
 from docx import Document
@@ -279,3 +280,30 @@ def parse_resume(file):
         return parse_txt(file)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
+
+
+def extract_text(source):
+    """
+    Backward-compatible text extraction entrypoint.
+
+    Accepts either:
+    - a filesystem path to a resume file, or
+    - a Werkzeug-like uploaded file object (with filename/read/seek).
+    """
+    if isinstance(source, (str, os.PathLike)):
+        path = os.fspath(source)
+        filename = os.path.basename(path)
+        with open(path, "rb") as f:
+            payload = f.read()
+
+        class _MemoryFile(io.BytesIO):
+            def __init__(self, data, name):
+                super().__init__(data)
+                self.filename = name
+
+        return parse_resume(_MemoryFile(payload, filename))
+
+    if hasattr(source, "filename") and hasattr(source, "read") and hasattr(source, "seek"):
+        return parse_resume(source)
+
+    raise ValueError("Unsupported input for extract_text; expected file path or uploaded file object")

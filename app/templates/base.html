@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}ResumeAI{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+          rel="stylesheet"/>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="/" class="navbar__brand">
+        <span>ResumeAI</span>
+    </a>
+    <a href="/" class="navbar__link">Home</a>
+</nav>
+
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+    Built with Python · Flask · HuggingFace ·
+    <span style="color:var(--accent)">ResumeAI</span>
+</footer>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(5, 8, 16, 0.92);
+    backdrop-filter: blur(8px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+">
+    <div style="text-align: center; max-width: 340px;">
+
+        <!-- Animated spinner -->
+        <div style="
+            width: 56px; height: 56px; margin: 0 auto 24px;
+            border: 3px solid rgba(99,179,237,0.15);
+            border-top-color: #63b3ed;
+            border-radius: 50%;
+            animation: overlaySpin 0.9s linear infinite;
+        "></div>
+
+        <!-- Title -->
+        <h3 style="
+            font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px;
+            font-weight: 700; color: #f1f5f9; margin: 0 0 10px;
+        ">Analyzing Your Resume</h3>
+
+        <!-- Rotating status message -->
+        <p id="loading-message" style="
+            font-family: 'Inter', sans-serif; font-size: 14px;
+            color: #64748b; margin: 0 0 28px;
+            transition: opacity 0.4s ease;
+        ">Parsing document...</p>
+
+        <!-- Progress dots -->
+        <div style="display: flex; gap: 8px; justify-content: center;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#63b3ed;
+                 animation: dotPulse 1.4s ease-in-out infinite;"></div>
+            <div style="width:8px;height:8px;border-radius:50%;background:#63b3ed;
+                 animation: dotPulse 1.4s ease-in-out 0.2s infinite;"></div>
+            <div style="width:8px;height:8px;border-radius:50%;background:#63b3ed;
+                 animation: dotPulse 1.4s ease-in-out 0.4s infinite;"></div>
+        </div>
+
+        <!-- Note about AI processing -->
+        <p style="
+            font-size: 12px; color: #334155; margin-top: 24px;
+            font-family: 'Inter', sans-serif;
+        ">AI models may take 20-40s on first run</p>
+    </div>
+</div>
+
+<style>
+@keyframes overlaySpin {
+    to { transform: rotate(360deg); }
+}
+@keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40%           { transform: scale(1.0); opacity: 1.0; }
+}
+</style>
+
+<script>
+const loadingOverlay  = document.getElementById('loading-overlay');
+const loadingMessage  = document.getElementById('loading-message');
+
+const loadingMessages = [
+    "Parsing document...",
+    "Extracting skills and entities...",
+    "Calculating ATS score...",
+    "Running AI analysis...",
+    "Comparing with job requirements...",
+    "Almost there..."
+];
+
+function showLoadingOverlay() {
+    loadingOverlay.style.display = 'flex';
+    let idx = 0;
+    window._loadingMsgInterval = setInterval(() => {
+        idx = (idx + 1) % loadingMessages.length;
+        loadingMessage.style.opacity = '0';
+        setTimeout(() => {
+            loadingMessage.textContent = loadingMessages[idx];
+            loadingMessage.style.opacity = '1';
+        }, 200);
+    }, 3000);
+}
+
+function hideLoadingOverlay() {
+    loadingOverlay.style.display = 'none';
+    clearInterval(window._loadingMsgInterval);
+}
+</script>
+
+</body>
+</html>
