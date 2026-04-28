@@ -65,7 +65,14 @@ STOPWORDS = {
     'beside', 'beyond', 'despite', 'except', 'since', 'though', 'although',
     'however', 'therefore', 'thus', 'hence', 'whereas', 'what', 'which',
     'who', 'whom', 'whose', 'if', 'unless', 'following', 'regarding',
-    'per', 'via', 'vs', 'etc', 'eg', 'ie', 're'
+    'per', 'via', 'vs', 'etc', 'eg', 'ie', 're',
+    # Additional words to block (garbage keywords)
+    'aim', 'align', 'aligned', 'alignment', 'anywhere', 'anytime',
+    'analysis', 'analyze', 'analytical', 'applications', 'application',
+    'approach', 'approaches', 'apis', 'api',
+    'backend', 'frontend', 'fullstack',
+    'absolute', 'accuracy', 'accurate', 'actionable', 'action',
+    'adherence', 'adopt', 'adoption', 'aiforbetterhealthcare',
 }
 
 
@@ -74,12 +81,16 @@ def extract_meaningful_keywords(text: str) -> set[str]:
     Extract only meaningful keywords from text.
     Filters out stopwords, punctuation, short tokens, numbers, month names.
     Works generically on any text - no hardcoded domain assumptions.
+    Enforces 4-character minimum with whitelist for short tech terms.
     """
     months = {
         'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
         'january', 'february', 'march', 'april', 'june', 'july', 'august', 'september',
         'october', 'november', 'december'
     }
+    
+    # Whitelist for short but valid tech terms
+    short_tech_whitelist = {'aws', 'gcp', 'sql', 'git', 'css', 'ux', 'ui', 'nlp', 'ml', 'ai'}
 
     tokens = re.split(r"[\s,;:()\[\]{}<>/\\|@#$%^&*+=~`\"'!?]+", text)
 
@@ -90,8 +101,17 @@ def extract_meaningful_keywords(text: str) -> set[str]:
 
         if not token:
             continue
+        
+        # Skip if starts with http or contains dots (URL fragments)
+        if token.startswith('http') or '.' in token:
+            continue
+        
+        # Minimum 3 chars, but enforce 4 chars except for whitelisted short terms
         if len(token) < 3:
             continue
+        if len(token) < 4 and token not in short_tech_whitelist:
+            continue
+            
         if token.isdigit():
             continue
         if re.match(r'^\d+[\w]*$', token) and token[:2].isdigit():
@@ -245,19 +265,35 @@ def match_job_description(resume_text: str, job_description: str) -> dict:
         except Exception as e:
             print(f"[Matcher] Requirement coverage failed: {e}")
 
+    # Use semantic score as primary — it is far more accurate than keyword overlap
+    # Fall back to keyword score only if semantic API completely failed
     if semantic_score is not None:
-        final_score = round(0.6 * keyword_score + 0.4 * semantic_score)
+        final_score = semantic_score
     else:
         final_score = keyword_score
+        print("[Matcher] Using keyword fallback score")
 
-    raw_boost = min(len(missing), 20)
+    # Generate match label based on score ranges
+    if final_score >= 70:
+        match_label = "Strong Match"
+    elif final_score >= 45:
+        match_label = "Good Match"
+    elif final_score >= 25:
+        match_label = "Partial Match"
+    else:
+        match_label = "Low Match"
+
+    # Score projection: calculate boost from missing keywords
+    raw_boost = min(len(missing), 15)
     projected = min(100, final_score + raw_boost)
+    # Recalculate actual_boost AFTER applying the min(100,...) cap
     actual_boost = projected - final_score
 
     return {
         'match_score': final_score,
         'keyword_score': keyword_score,
         'semantic_score': semantic_score,
+        'match_label': match_label,
         'matched_keywords': matched,
         'missing_keywords': missing,
         'section_scores': section_scores,
@@ -302,24 +338,34 @@ def match_resume_to_job(resume_text: str, job_description: str) -> dict:
         }
     """
     match_data = match_job_description(resume_text, job_description)
+    print(f"[DEBUG] match_data keys: {match_data.keys()}")
+    print(f"[DEBUG] match_data keyword_score: {match_data.get('keyword_score')}")
+    
     match_score = match_data['match_score']
     matched_keywords = match_data['matched_keywords']
     missing_keywords = match_data['missing_keywords']
+    match_label = match_data.get('match_label', 'Low Match')
+    semantic_score = match_data.get('semantic_score')
+    keyword_score_val = match_data.get('keyword_score')
     
-    # Generate feedback based on score
-    if match_score >= 80:
-        feedback = "Excellent match! Your resume aligns well with this role."
-    elif match_score >= 60:
-        feedback = "Good match. Consider adding more role-specific keywords."
-    elif match_score >= 40:
-        feedback = "Moderate match. Tailor your resume further to this job."
-    else:
-        feedback = "Low match. Significant gaps between resume and job requirements."
+    # Generate feedback based on match label (which is based on semantic similarity)
+    feedback_map = {
+        'Strong Match': 'Your resume is a strong semantic match for this role.',
+        'Good Match': 'Your resume aligns well with the job requirements.',
+        'Partial Match': 'Your resume partially matches. Consider tailoring it.',
+        'Low Match': 'Significant gaps between your resume and this role.'
+    }
+    feedback = feedback_map.get(match_label, 'Unable to assess match.')
     
-    return {
+    result = {
         'match_score': match_score,
+        'keyword_score': keyword_score_val,
         'matched_keywords': matched_keywords,
         'missing_keywords': missing_keywords,
         'feedback': feedback,
+        'match_label': match_label,
+        'semantic_score': semantic_score,
         'score_projection': match_data['score_projection']
     }
+    print(f"[DEBUG] Result keyword_score: {result.get('keyword_score')}")
+    return result

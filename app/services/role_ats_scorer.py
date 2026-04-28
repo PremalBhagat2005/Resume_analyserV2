@@ -79,7 +79,10 @@ def score_role_specific_ats(
     else:
         adjustment = -1 * min(15, int((40 - coverage_pct) / 3))
 
-    adjusted_score = max(0, min(100, base_ats_score + adjustment))
+    # Adjusted score should never go below base score
+    adjusted_score = max(base_ats_score, min(100, base_ats_score + adjustment))
+    # Recalculate delta based on actual adjustment applied
+    delta = adjusted_score - base_ats_score
 
     # Recommendation
     if coverage_pct >= 70:
@@ -104,7 +107,7 @@ def score_role_specific_ats(
     return {
         "adjusted_score": adjusted_score,
         "base_score": base_ats_score,
-        "adjustment": adjustment,
+        "adjustment": delta,
         "jd_keywords": jd_keywords[:20],
         "matched_jd_kw": matched,
         "coverage_pct": coverage_pct,

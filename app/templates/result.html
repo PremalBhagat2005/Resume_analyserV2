@@ -8,7 +8,7 @@
         <div class="result-header__file">FILE {{ filename }}</div>
         <h1 class="result-header__title">Analysis Complete</h1>
     </div>
-    <a href="/" class="btn btn--outline"><- Analyse Another</a>
+    <a href="/" class="btn btn--outline"> Analyse Another Resume</a>
 </div>
 
 <div class="tabs" id="tabNav">
@@ -74,7 +74,7 @@
                         {% elif pct >= 50 %}fill--blue
                         {% elif pct >= 30 %}fill--amber
                         {% else %}fill--red{% endif %}"
-                        style="width:{{ pct }}%">
+                        style="width: {{ pct }}%;">
                     </div>
                 </div>
                 <span class="breakdown-row__score">
@@ -419,7 +419,7 @@
                     {% elif ms >= 60 %}fill--blue
                     {% elif ms >= 40 %}fill--amber
                     {% else %}fill--red{% endif %}"
-                    style="width:{{ ms }}%">
+                    style="width: {{ ms }}%">
                 </div>
             </div>
             <p class="match-hero__feedback">
@@ -461,7 +461,7 @@
                 {% endfor %}
             </div>
             {% else %}
-            <p class="empty-msg" style="color:var(--green)">
+            <p class="empty-msg empty-msg--success">
                 Resume covers all key job terms.
             </p>
             {% endif %}
@@ -470,7 +470,6 @@
 
 {% else %}
     <div class="empty-state">
-        <div class="empty-state__icon">Job</div>
         <h3 class="empty-state__title">
             No Job Description Provided
         </h3>
@@ -486,7 +485,7 @@
 
     <!-- ── Role-Specific ATS Adjustment ────────────────────────── -->
     {% if role_ats %}
-    <div class="analysis-section" style="margin-top: 2rem;">
+    <div class="analysis-section analysis-section--margin-top">
         <h2 class="section-title">Role-Specific ATS Adjustment</h2>
         
         <div class="score-comparison">
@@ -541,7 +540,7 @@
 
     <!-- ── Keyword Gap Analysis ────────────────────────────────── -->
     {% if keyword_gaps %}
-    <div class="analysis-section" style="margin-top: 2rem;">
+    <div class="analysis-section analysis-section--margin-top">
         <h2 class="section-title">Keyword Gap Analysis</h2>
 
         <div class="keywords-categories">
@@ -586,7 +585,7 @@
             </div>
             
             {% if keyword_gaps.simulation.keywords_to_add %}
-            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div class="keywords-divider">
                 <p class="small-label">Top Keywords to Add:</p>
                 <div class="pill-wrap">
                     {% for kw in (keyword_gaps.simulation.keywords_to_add)[:8] %}
@@ -605,25 +604,24 @@
 <div class="tab-panel" id="tab-feedback">
     <!-- Formatting & Structure -->
     {% if formatting_result %}
-    <div style="max-width:900px; margin:0 auto; padding:8px 0;">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-            <div style="width:4px; height:24px; background:linear-gradient(180deg,#f87171,#fb923c); border-radius:2px;"></div>
-            <h3 style="margin:0; font-family:Syne,sans-serif; font-size:18px; font-weight:700; color:#f1f5f9;">Issues Found</h3>
-            <span id="issueCountBadge" style="background:rgba(248,113,113,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.3); border-radius:20px; padding:2px 12px; font-size:12px; font-weight:700;">0</span>
+    <div class="feedback-container">
+        <div class="feedback-header">
+            <div class="feedback-header__line feedback-header__line--issue"></div>
+            <h3 class="feedback-header__title">Issues Found</h3>
+            <span id="issueCountBadge" class="feedback-header__badge feedback-header__badge--issue">0</span>
         </div>
 
-        <div id="issuesContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+        <div id="issuesContainer" class="feedback-grid feedback-grid--issues"></div>
 
-        <div style="height:1px; background:linear-gradient(90deg,transparent,rgba(99,179,237,0.2),transparent); margin:28px 0;"></div>
+        <div class="feedback-divider"></div>
 
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-            <div style="width:4px; height:24px; background:linear-gradient(180deg,#34d399,#4fd1c5); border-radius:2px;"></div>
-            <h3 style="margin:0; font-family:Syne,sans-serif; font-size:18px; font-weight:700; color:#f1f5f9;">Strengths</h3>
-            <span id="strengthCountBadge" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); border-radius:20px; padding:2px 12px; font-size:12px; font-weight:700;">0</span>
+        <div class="feedback-header">
+            <div class="feedback-header__line feedback-header__line--strength"></div>
+            <h3 class="feedback-header__title">Strengths</h3>
+            <span id="strengthCountBadge" class="feedback-header__badge feedback-header__badge--strength">0</span>
         </div>
 
-        <div id="strengthsContainer" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
-    </div>
+        <div id="strengthsContainer" class="feedback-grid feedback-grid--strengths"></div>
     {% endif %}
 
     {% if section_feedback %}
@@ -752,7 +750,7 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <div class="empty-state__icon">OK</div>
+        <div class="empty-state__icon">File Uploaded</div>
         <h3 class="empty-state__title">
             No feedback available
         </h3>
@@ -762,44 +760,6 @@
     </div>
     {% endif %}
 </div>
-
-<style>
-@keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.feedback-card {
-    animation: fadeSlideUp 0.4s ease both;
-}
-
-#issuesContainer .feedback-card:nth-child(1),
-#strengthsContainer .feedback-card:nth-child(1) { animation-delay: 0.05s; }
-#issuesContainer .feedback-card:nth-child(2),
-#strengthsContainer .feedback-card:nth-child(2) { animation-delay: 0.10s; }
-#issuesContainer .feedback-card:nth-child(3),
-#strengthsContainer .feedback-card:nth-child(3) { animation-delay: 0.15s; }
-#issuesContainer .feedback-card:nth-child(4),
-#strengthsContainer .feedback-card:nth-child(4) { animation-delay: 0.20s; }
-#issuesContainer .feedback-card:nth-child(5),
-#strengthsContainer .feedback-card:nth-child(5) { animation-delay: 0.25s; }
-#issuesContainer .feedback-card:nth-child(6),
-#strengthsContainer .feedback-card:nth-child(6) { animation-delay: 0.30s; }
-#issuesContainer .feedback-card:nth-child(7),
-#strengthsContainer .feedback-card:nth-child(7) { animation-delay: 0.35s; }
-#issuesContainer .feedback-card:nth-child(8),
-#strengthsContainer .feedback-card:nth-child(8) { animation-delay: 0.40s; }
-#issuesContainer .feedback-card:nth-child(9),
-#strengthsContainer .feedback-card:nth-child(9) { animation-delay: 0.45s; }
-#issuesContainer .feedback-card:nth-child(10),
-#strengthsContainer .feedback-card:nth-child(10) { animation-delay: 0.50s; }
-
-@media (max-width: 680px) {
-    #strengthsContainer {
-        grid-template-columns: 1fr !important;
-    }
-}
-</style>
 
 <script>
 document.querySelectorAll('.tab').forEach(function(tab) {
@@ -821,7 +781,6 @@ document.querySelectorAll('.tab').forEach(function(tab) {
 {% if formatting_result %}
 (function() {
     var feedback = {
-        formatting_score: {{ formatting_result.score|default(0)|int }},
         issues: {{ (formatting_result.issues|default([]))|tojson }},
         strengths: {{ (formatting_result.passes|default([]))|tojson }}
     };
@@ -829,49 +788,83 @@ document.querySelectorAll('.tab').forEach(function(tab) {
     var issues = feedback.issues || [];
     var strengths = feedback.strengths || [];
 
-    var issueCountBadgeEl = document.getElementById('issueCountBadge');
-    var strengthCountBadgeEl = document.getElementById('strengthCountBadge');
+    var issueCountBadge = document.getElementById('issueCountBadge');
+    var strengthCountBadge = document.getElementById('strengthCountBadge');
     var issuesContainer = document.getElementById('issuesContainer');
     var strengthsContainer = document.getElementById('strengthsContainer');
 
-    if (!issueCountBadgeEl || !strengthCountBadgeEl || !issuesContainer || !strengthsContainer) {
+    if (!issueCountBadge || !strengthCountBadge || !issuesContainer || !strengthsContainer) {
         return;
     }
 
-    var escapeHtml = function(text) {
-        var map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
-    };
-
-    issueCountBadgeEl.textContent = String(issues.length);
-    strengthCountBadgeEl.textContent = String(strengths.length);
-
-    issuesContainer.innerHTML = issues.map(function(issue) {
-        return '<div class="feedback-card" style="display:flex; align-items:flex-start; gap:14px; background:linear-gradient(135deg, rgba(248,113,113,0.05) 0%, rgba(17,24,39,0.8) 100%); border:1px solid rgba(248,113,113,0.2); border-left:3px solid #f87171; border-radius:12px; padding:14px 18px; transition:all 0.25s ease;" onmouseover="this.style.background=\'linear-gradient(135deg,rgba(248,113,113,0.1) 0%,rgba(17,24,39,0.9) 100%)\';this.style.borderColor=\'rgba(248,113,113,0.4)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 20px rgba(248,113,113,0.1)\'" onmouseout="this.style.background=\'linear-gradient(135deg,rgba(248,113,113,0.05) 0%,rgba(17,24,39,0.8) 100%)\';this.style.borderColor=\'rgba(248,113,113,0.2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">' +
-            '<div style="width:28px; height:28px; border-radius:50%; flex-shrink:0; margin-top:1px; background:rgba(248,113,113,0.15); border:1px solid rgba(248,113,113,0.4); display:flex; align-items:center; justify-content:center; font-size:13px;">!</div>' +
-            '<p style="margin:0; font-size:13.5px; color:#cbd5e1; line-height:1.6; font-family:\'DM Sans\',sans-serif;">' + escapeHtml(issue) + '</p>' +
-        '</div>';
-    }).join('');
-
-    strengthsContainer.innerHTML = strengths.map(function(strength) {
-        return '<div class="feedback-card" style="display:flex; align-items:center; gap:14px; background:linear-gradient(135deg, rgba(52,211,153,0.05) 0%, rgba(17,24,39,0.8) 100%); border:1px solid rgba(52,211,153,0.2); border-left:3px solid #34d399; border-radius:12px; padding:14px 18px; transition:all 0.25s ease; cursor:default;" onmouseover="this.style.background=\'linear-gradient(135deg,rgba(52,211,153,0.1) 0%,rgba(17,24,39,0.9) 100%)\';this.style.borderColor=\'rgba(52,211,153,0.45)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 24px rgba(52,211,153,0.12)\'" onmouseout="this.style.background=\'linear-gradient(135deg,rgba(52,211,153,0.05) 0%,rgba(17,24,39,0.8) 100%)\';this.style.borderColor=\'rgba(52,211,153,0.2)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">' +
-            '<div style="width:28px; height:28px; border-radius:50%; flex-shrink:0; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.4); display:flex; align-items:center; justify-content:center; font-size:13px;">✓</div>' +
-            '<p style="margin:0; font-size:13.5px; color:#cbd5e1; line-height:1.5; font-family:\'DM Sans\',sans-serif;">' + escapeHtml(strength) + '</p>' +
-        '</div>';
-    }).join('');
-
-    if (issues.length === 0) {
-        issuesContainer.innerHTML = '<p style="color:#64748b; font-style:italic; margin:0;">No issues detected.</p>';
+    // Create and render issue cards
+    function createIssueCard(text) {
+        var card = document.createElement('div');
+        card.className = 'feedback-card feedback-card--issue';
+        
+        var icon = document.createElement('div');
+        icon.className = 'feedback-card__icon';
+        icon.textContent = '!';
+        
+        var textEl = document.createElement('p');
+        textEl.className = 'feedback-card__text';
+        textEl.textContent = text;
+        
+        card.appendChild(icon);
+        card.appendChild(textEl);
+        
+        return card;
     }
 
-    if (strengths.length === 0) {
-        strengthsContainer.innerHTML = '<p style="color:#64748b; font-style:italic; margin:0;">No specific strengths detected.</p>';
+    // Create and render strength cards
+    function createStrengthCard(text) {
+        var card = document.createElement('div');
+        card.className = 'feedback-card feedback-card--strength';
+        
+        var icon = document.createElement('div');
+        icon.className = 'feedback-card__icon';
+        icon.textContent = '✓';
+        
+        var textEl = document.createElement('p');
+        textEl.className = 'feedback-card__text';
+        textEl.textContent = text;
+        
+        card.appendChild(icon);
+        card.appendChild(textEl);
+        
+        return card;
+    }
+
+    // Update badges
+    issueCountBadge.textContent = String(issues.length);
+    strengthCountBadge.textContent = String(strengths.length);
+
+    // Render issues
+    if (issues.length > 0) {
+        issues.forEach(function(issue) {
+            issuesContainer.appendChild(createIssueCard(issue));
+        });
+    } else {
+        var emptyMsg = document.createElement('p');
+        emptyMsg.style.color = '#64748b';
+        emptyMsg.style.fontStyle = 'italic';
+        emptyMsg.style.margin = '0';
+        emptyMsg.textContent = 'No issues detected.';
+        issuesContainer.appendChild(emptyMsg);
+    }
+
+    // Render strengths
+    if (strengths.length > 0) {
+        strengths.forEach(function(strength) {
+            strengthsContainer.appendChild(createStrengthCard(strength));
+        });
+    } else {
+        var emptyMsg = document.createElement('p');
+        emptyMsg.style.color = '#64748b';
+        emptyMsg.style.fontStyle = 'italic';
+        emptyMsg.style.margin = '0';
+        emptyMsg.textContent = 'No specific strengths detected.';
+        strengthsContainer.appendChild(emptyMsg);
     }
 })();
 {% endif %}

@@ -331,41 +331,91 @@ def get_semantic_similarity(text_a, text_b):
     Compute semantic similarity between two text inputs.
     Returns a float between 0 and 1, or None on failure.
     """
+    import time
+    import requests
+    
+    # Guard: ensure both texts are strings and non-empty
+    text_a = str(text_a or '').strip()
+    text_b = str(text_b or '').strip()
+    
+    if not text_a or not text_b:
+        print("[SIM] Empty text, skipping")
+        return None
+    
+    # Truncate to safe length
+    text_a = text_a[:1500]
+    text_b = text_b[:1500]
+    
     api_url = "https://api-inference.huggingface.co/models/anass1209/resume-job-matcher-all-MiniLM-L6-v2"
     headers = {"Authorization": f"Bearer {os.getenv('HF_API_KEY')}"}
+    
+    payload = {
+        "inputs": {
+            "source_sentence": text_a,
+            "sentences": [text_b]
+        }
+    }
+    
+    print(f"[SIM] Sending request, text_a length: {len(text_a)}, text_b length: {len(text_b)}")
 
     try:
         response = hf_post_with_retry(
             api_url,
-            {
-                "inputs": {
-                    "source_sentence": (text_a or "")[:1024],
-                    "sentences": [(text_b or "")[:1024]]
-                }
-            },
+            payload,
             headers,
             max_wait=60
         )
         
-        if response is None or response.status_code != 200:
-            print(f"[Semantic] API error: {response.status_code if response else 'No response'}")
+        print(f"[SIM] Status: {response.status_code if response else 'None'}")
+        print(f"[SIM] Body: {response.text[:300] if response else 'None'}")
+        
+        if response is None:
+            print("[SIM] No response from API")
+            return None
+        
+        if response.status_code == 503:
+            try:
+                body = response.json()
+                wait = min(float(body.get('estimated_time', 15)), 25)
+                print(f"[SIM] Model loading, waiting {wait}s...")
+                time.sleep(wait)
+                # Retry once
+                response = requests.post(api_url, headers=headers,
+                                         json=payload, timeout=30)
+                print(f"[SIM] Retry status: {response.status_code}")
+                print(f"[SIM] Retry body: {response.text[:300]}")
+            except Exception as e:
+                print(f"[SIM] Retry failed: {e}")
+                return None
+        
+        if response.status_code != 200:
+            print(f"[SIM] API error: {response.status_code}")
             return None
 
         result = response.json()
+        print(f"[SIM] Raw result: {result}")
+        
         if isinstance(result, list) and len(result) > 0:
             value = result[0]
             if isinstance(value, list) and len(value) > 0:
                 value = value[0]
-            return round(float(value), 4)
+            score = round(float(value), 4)
+            print(f"[SIM] Parsed score: {score}")
+            return score
 
         if isinstance(result, dict):
             for key in ["similarity", "score", "cosine_similarity"]:
                 if key in result:
-                    return round(float(result[key]), 4)
+                    score = round(float(result[key]), 4)
+                    print(f"[SIM] Parsed score from key '{key}': {score}")
+                    return score
 
+        print(f"[SIM] Unexpected response format: {result}")
         return None
     except Exception as e:
-        print(f"[Semantic] Error: {e}")
+        print(f"[SIM] Error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
