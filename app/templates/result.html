@@ -7,6 +7,14 @@
     <div>
         <div class="result-header__file">FILE {{ filename }}</div>
         <h1 class="result-header__title">Analysis Complete</h1>
+        {% if session.get('user_id') %}
+        <div class="result-header__hint">Saved to your account history.</div>
+        {% else %}
+        <div class="result-header__hint">
+            <a href="/signup" class="account-card__link">Create an account</a>
+            to save this and future scores.
+        </div>
+        {% endif %}
     </div>
     <a href="/" class="btn btn--outline"> Analyse Another Resume</a>
 </div>

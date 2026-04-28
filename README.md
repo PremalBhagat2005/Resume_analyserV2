@@ -17,6 +17,8 @@ Flask-based web application that scores ATS readiness, extracts key resume entit
 - Education and work experience extraction using pattern-based parsing
 - Optional job match scoring with matched and missing keywords
 - Interactive web dashboard with charts and detailed analysis
+- Account creation and sign-in using MongoDB
+- Saved analysis history (ATS scores) for signed-in users
 - **Fast performance** with parallel API calls and HF cold-start retry logic
 
 ## Performance Optimizations
@@ -50,12 +52,15 @@ pip install -r requirements.txt
 ```env
 HF_API_KEY=your_hugging_face_api_key_here
 FLASK_ENV=development
+MONGO_URI=mongodb://localhost:27017/
+MONGO_DB_NAME=resume_analyser
 ```
 
 Notes:
 - The app uses HF inference APIs when available
 - If HF calls fail, fallback logic still runs for key parts (skills and job matching)
 - Free-tier models may have cold-start delays (20-40s first use); automatic retry handles this
+- Set `MONGO_URI` to enable account and history features
 
 3. Start the app:
 
@@ -127,6 +132,10 @@ python run.py
 ## API Endpoints
 
 - `GET /` - Home page with resume upload form
+- `GET /signup` / `POST /signup` - Create account
+- `GET /signin` / `POST /signin` - Sign in
+- `GET /logout` - End user session
+- `GET /history` - View saved ATS score history (requires sign in)
 - `POST /analyse` - Analyze resume and job description
   - Form fields: `resume` (file), `job_description` (optional text)
   - Returns: rendered HTML results page

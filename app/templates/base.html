@@ -17,7 +17,17 @@
     <a href="/" class="navbar__brand">
         <span>ResumeAI</span>
     </a>
-    <a href="/" class="navbar__link">Home</a>
+    <div class="navbar__actions">
+        <a href="/" class="navbar__link">Home</a>
+        {% if session.get('user_id') %}
+        <a href="/history" class="navbar__link">History</a>
+        <span class="navbar__user">{{ session.get('user_name', 'User') }}</span>
+        <a href="/logout" class="navbar__link">Logout</a>
+        {% else %}
+        <a href="/signin" class="navbar__link">Sign in</a>
+        <a href="/signup" class="navbar__link">Create Account</a>
+        {% endif %}
+    </div>
 </nav>
 
 <main class="main-content">

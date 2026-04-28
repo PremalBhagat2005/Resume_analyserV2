@@ -96,50 +96,76 @@
             <div class="tip">
                 <span class="tip__icon">1</span>
                 <div>
-                    <div class="tip__title">Clear section headers</div>
+                    <div class="tip__title">Use clear section headers</div>
                     <div class="tip__desc">
-                        Use: Skills, Experience, Education
+                        Skills, Experience, Education, Summary help ATS parsing
                     </div>
                 </div>
             </div>
             <div class="tip">
                 <span class="tip__icon">2</span>
                 <div>
-                    <div class="tip__title">Mirror job keywords</div>
+                    <div class="tip__title">Match job keywords exactly</div>
                     <div class="tip__desc">
-                        Use exact phrases from the job description
+                        Copy key phrases from the job description for higher ATS match
                     </div>
                 </div>
             </div>
             <div class="tip">
                 <span class="tip__icon">3</span>
                 <div>
-                    <div class="tip__title">Quantify results</div>
+                    <div class="tip__title">Quantify your achievements</div>
                     <div class="tip__desc">
-                        "40% faster", "led team of 5"
+                        Numbers stand out: "40% faster", "led team of 5", "25% cost reduction"
                     </div>
                 </div>
             </div>
             <div class="tip">
                 <span class="tip__icon">4</span>
                 <div>
-                    <div class="tip__title">300-800 words</div>
+                    <div class="tip__title">Maintain tight formatting</div>
                     <div class="tip__desc">
-                        One page for under 5 years experience
+                        300-800 words, single page (under 5 yrs experience) keeps it scannable
                     </div>
                 </div>
             </div>
             <div class="tip">
                 <span class="tip__icon">5</span>
                 <div>
-                    <div class="tip__title">All contact info</div>
+                    <div class="tip__title">Provide complete contact info</div>
                     <div class="tip__desc">
-                        Name, email, phone, LinkedIn URL
+                        Name, email, phone, LinkedIn URL at the top of your resume
                     </div>
                 </div>
             </div>
         </div>
     </aside>
+</section>
+
+<section class="account-section">
+    <div class="account-card">
+        {% if session.get('user_id') %}
+        <h2 class="account-card__title">Your scores are now being saved</h2>
+        <p class="account-card__description">
+            Every analysis you run while signed in is stored in your account history.
+        </p>
+        <a href="/history" class="btn btn--secondary btn--full">
+            View Saved History
+        </a>
+        {% else %}
+        <h2 class="account-card__title">Save Your Analysis History</h2>
+        <p class="account-card__description">
+            Create an account to save and track all your resume analyses over time.
+            Monitor your progress and access previous results anytime.
+        </p>
+        <a href="/signup" class="btn btn--secondary btn--full">
+            Create Account
+        </a>
+        <p class="account-card__signin">
+            Already have an account? <a href="/signin" class="account-card__link">Sign in here</a>
+        </p>
+        {% endif %}
+    </div>
 </section>
 
 <script>

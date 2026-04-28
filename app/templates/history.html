@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Analysis History - ResumeAI{% endblock %}
+
+{% block content %}
+
+<section class="history-page">
+    <div class="history-header">
+        <h1 class="history-title">Your Analysis History</h1>
+        <p class="history-subtitle">Saved ATS scores from your previous resume analyses.</p>
+    </div>
+
+    {% if analyses %}
+    <div class="history-table-wrap">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Filename</th>
+                    <th>ATS Score</th>
+                    <th>Band</th>
+                    <th>Words</th>
+                    <th>Job Match</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in analyses %}
+                <tr>
+                    <td>{{ item.created_at_display }}</td>
+                    <td>{{ item.filename or '-' }}</td>
+                    <td>{{ item.score or 0 }}/100</td>
+                    <td>{{ item.score_band or '-' }}</td>
+                    <td>{{ item.word_count or '-' }}</td>
+                    <td>
+                        {% if item.match_score is not none %}
+                            {{ item.match_score }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="history-empty">
+        <h2>No saved analyses yet</h2>
+        <p>Run a resume analysis while signed in and your score history will appear here.</p>
+        <a href="/" class="btn btn--primary">Analyse Resume</a>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

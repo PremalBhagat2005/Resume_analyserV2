@@ -1,9 +1,10 @@
 from flask import (
-    Blueprint, render_template, request, current_app, jsonify
+    Blueprint, render_template, request, session, redirect, url_for
 )
 import os
 import tempfile
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from concurrent.futures import ThreadPoolExecutor
 
 from app.services.parser import extract_text
@@ -20,6 +21,13 @@ from app.services.section_feedback import generate_section_feedback
 from app.services.keyword_gap import categorise_keyword_gaps
 from app.services.role_ats_scorer import score_role_specific_ats
 from app.utils.helpers import extract_skills_from_keywords, clean_keywords
+from app.models.db import (
+    create_user,
+    get_user_by_email,
+    save_analysis,
+    get_user_analyses,
+    is_db_available,
+)
 
 main_bp = Blueprint("main", __name__)
 
@@ -37,6 +45,98 @@ def allowed_file(filename: str) -> bool:
 @main_bp.route("/")
 def index():
     return render_template("index.html")
+
+
+@main_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "GET":
+        return render_template("signup.html")
+
+    if not is_db_available():
+        return render_template(
+            "signup.html",
+            error="Database is not configured. Set MONGO_URI first.",
+        )
+
+    full_name = request.form.get("fullname", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+    confirm_password = request.form.get("confirm_password", "")
+    accepted_terms = request.form.get("terms")
+
+    if not full_name or not email or not password:
+        return render_template("signup.html", error="All fields are required.")
+
+    if len(password) < 8:
+        return render_template(
+            "signup.html",
+            error="Password must be at least 8 characters long.",
+        )
+
+    if password != confirm_password:
+        return render_template("signup.html", error="Passwords do not match.")
+
+    if not accepted_terms:
+        return render_template("signup.html", error="Please accept terms to continue.")
+
+    user_doc, create_error = create_user(
+        full_name=full_name,
+        email=email,
+        password_hash=generate_password_hash(password),
+    )
+    if create_error:
+        return render_template("signup.html", error=create_error)
+
+    session["user_id"] = str(user_doc["_id"])
+    session["user_name"] = user_doc.get("full_name", "")
+    session["user_email"] = user_doc.get("email", "")
+    return redirect(url_for("main.index"))
+
+
+@main_bp.route("/signin", methods=["GET", "POST"])
+def signin():
+    if request.method == "GET":
+        return render_template("signin.html")
+
+    if not is_db_available():
+        return render_template(
+            "signin.html",
+            error="Database is not configured. Set MONGO_URI first.",
+        )
+
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    if not email or not password:
+        return render_template("signin.html", error="Email and password are required.")
+
+    user_doc = get_user_by_email(email)
+    if not user_doc:
+        return render_template("signin.html", error="No account found for this email.")
+
+    if not check_password_hash(user_doc.get("password_hash", ""), password):
+        return render_template("signin.html", error="Incorrect password.")
+
+    session["user_id"] = str(user_doc["_id"])
+    session["user_name"] = user_doc.get("full_name", "")
+    session["user_email"] = user_doc.get("email", "")
+    return redirect(url_for("main.index"))
+
+
+@main_bp.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("main.index"))
+
+
+@main_bp.route("/history")
+def history():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("main.signin"))
+
+    analyses = get_user_analyses(user_id=user_id, limit=30)
+    return render_template("history.html", analyses=analyses)
 
 
 @main_bp.route("/analyse", methods=["POST"])
@@ -232,6 +332,22 @@ def analyse():
         # Always delete temp file; never persist user data.
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+    if session.get("user_id") and is_db_available():
+        save_analysis(
+            user_id=session.get("user_id"),
+            analysis_payload={
+                "filename": filename_safe,
+                "score": score,
+                "score_band": score_band,
+                "score_class": score_class,
+                "word_count": word_count,
+                "job_description_provided": bool(job_description),
+                "match_score": (
+                    (job_match or {}).get("match_score") if job_match else None
+                ),
+            },
+        )
 
     return render_template(
         "result.html",

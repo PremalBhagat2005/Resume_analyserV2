@@ -25,8 +25,7 @@ def create_app():
 	from app.routes.main import main_bp
 	app.register_blueprint(main_bp)
 
-	# MongoDB hook - future
-	# from app.models.db import init_db
-	# init_db(app)
+	from app.models.db import init_db
+	init_db(app)
 
 	return app
