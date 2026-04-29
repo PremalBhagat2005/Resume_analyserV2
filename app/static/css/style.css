@@ -109,7 +109,8 @@ body {
 .navbar__link:hover { color: var(--text); }
 
 .navbar__user {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
     color: var(--text-faint);
     border: 1px solid var(--border-light);
     border-radius: 999px;
@@ -1827,8 +1828,16 @@ body {
 .auth-form {
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+    gap: 0.9rem;
     margin-bottom: 1.5rem;
+}
+
+.auth-form .form-group {
+    margin-bottom: 0;
+}
+
+.auth-form .form-label {
+    margin-bottom: 0.38rem;
 }
 
 .form-input {

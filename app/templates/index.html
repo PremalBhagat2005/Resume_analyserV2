@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}ResumeAI - ATS Resume Analyser{% endblock %}
+{% block title %}ResumeInsight - ATS Resume Analyser{% endblock %}
 
 {% block content %}
 
@@ -36,7 +36,7 @@
 
         {% if error %}
         <div class="alert alert--error">
-            <span>!</span> {{ error }}
+            {{ error }}
         </div>
         {% endif %}
 

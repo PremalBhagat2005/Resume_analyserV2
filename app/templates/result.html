@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Results - ResumeAI{% endblock %}
+{% block title %}Results - ResumeInsight{% endblock %}
 
 {% block content %}
 
@@ -7,14 +7,6 @@
     <div>
         <div class="result-header__file">FILE {{ filename }}</div>
         <h1 class="result-header__title">Analysis Complete</h1>
-        {% if session.get('user_id') %}
-        <div class="result-header__hint">Saved to your account history.</div>
-        {% else %}
-        <div class="result-header__hint">
-            <a href="/signup" class="account-card__link">Create an account</a>
-            to save this and future scores.
-        </div>
-        {% endif %}
     </div>
     <a href="/" class="btn btn--outline"> Analyse Another Resume</a>
 </div>
@@ -82,7 +74,7 @@
                         {% elif pct >= 50 %}fill--blue
                         {% elif pct >= 30 %}fill--amber
                         {% else %}fill--red{% endif %}"
-                        style="width: {{ pct }}%;">
+                        style="width:{{ pct }}%">
                     </div>
                 </div>
                 <span class="breakdown-row__score">
@@ -427,7 +419,7 @@
                     {% elif ms >= 60 %}fill--blue
                     {% elif ms >= 40 %}fill--amber
                     {% else %}fill--red{% endif %}"
-                    style="width: {{ ms }}%">
+                    style="width:{{ ms }}%">
                 </div>
             </div>
             <p class="match-hero__feedback">
@@ -478,6 +470,7 @@
 
 {% else %}
     <div class="empty-state">
+        <div class="empty-state__icon">Job</div>
         <h3 class="empty-state__title">
             No Job Description Provided
         </h3>
@@ -632,141 +625,7 @@
         <div id="strengthsContainer" class="feedback-grid feedback-grid--strengths"></div>
     {% endif %}
 
-    {% if section_feedback %}
-    <div class="feedback-sections">
-        <!-- Contact Info Feedback -->
-        {% if section_feedback.contact %}
-        <div class="feedback-section">
-            <div class="feedback-section__header">
-                <h3 class="feedback-section__title">Contact Information</h3>
-                <span class="feedback-section__status
-                    {% if section_feedback.contact.status == 'Good' %}status--good
-                    {% elif section_feedback.contact.status == 'Fair' %}status--fair
-                    {% else %}status--needs-work{% endif %}">
-                    {{ section_feedback.contact.status }}
-                </span>
-            </div>
-            {% if section_feedback.contact.tips %}
-            <ul class="feedback-tips">
-                {% for tip in section_feedback.contact.tips %}
-                <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Experience Feedback -->
-        {% if section_feedback.experience %}
-        <div class="feedback-section">
-            <div class="feedback-section__header">
-                <h3 class="feedback-section__title">Work Experience</h3>
-                <span class="feedback-section__status
-                    {% if section_feedback.experience.status == 'Good' %}status--good
-                    {% elif section_feedback.experience.status == 'Fair' %}status--fair
-                    {% else %}status--needs-work{% endif %}">
-                    {{ section_feedback.experience.status }}
-                </span>
-            </div>
-            {% if section_feedback.experience.tips %}
-            <ul class="feedback-tips">
-                {% for tip in section_feedback.experience.tips %}
-                <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Education Feedback -->
-        {% if section_feedback.education %}
-        <div class="feedback-section">
-            <div class="feedback-section__header">
-                <h3 class="feedback-section__title">Education</h3>
-                <span class="feedback-section__status
-                    {% if section_feedback.education.status == 'Good' %}status--good
-                    {% elif section_feedback.education.status == 'Fair' %}status--fair
-                    {% else %}status--needs-work{% endif %}">
-                    {{ section_feedback.education.status }}
-                </span>
-            </div>
-            {% if section_feedback.education.tips %}
-            <ul class="feedback-tips">
-                {% for tip in section_feedback.education.tips %}
-                <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Skills Feedback -->
-        {% if section_feedback.skills %}
-        <div class="feedback-section">
-            <div class="feedback-section__header">
-                <h3 class="feedback-section__title">Skills</h3>
-                <span class="feedback-section__status
-                    {% if section_feedback.skills.status == 'Good' %}status--good
-                    {% elif section_feedback.skills.status == 'Fair' %}status--fair
-                    {% else %}status--needs-work{% endif %}">
-                    {{ section_feedback.skills.status }}
-                </span>
-            </div>
-            {% if section_feedback.skills.tips %}
-            <ul class="feedback-tips">
-                {% for tip in section_feedback.skills.tips %}
-                <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Summary Feedback -->
-        {% if section_feedback.summary %}
-        <div class="feedback-section">
-            <div class="feedback-section__header">
-                <h3 class="feedback-section__title">Professional Summary</h3>
-                <span class="feedback-section__status
-                    {% if section_feedback.summary.status == 'Good' %}status--good
-                    {% elif section_feedback.summary.status == 'Fair' %}status--fair
-                    {% else %}status--needs-work{% endif %}">
-                    {{ section_feedback.summary.status }}
-                </span>
-            </div>
-            {% if section_feedback.summary.tips %}
-            <ul class="feedback-tips">
-                {% for tip in section_feedback.summary.tips %}
-                <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Overall Feedback -->
-        {% if section_feedback.overall %}
-        <div class="overall-feedback">
-            <h3 class="overall-feedback__title">Overall Recommendations</h3>
-            <ul class="overall-tips">
-                {% for rec in section_feedback.overall %}
-                <li>{{ rec }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-state__icon">File Uploaded</div>
-        <h3 class="empty-state__title">
-            No feedback available
-        </h3>
-        <p class="empty-state__desc">
-            Your resume passed all checks!
-        </p>
-    </div>
-    {% endif %}
+    {# Detailed per-section feedback cards removed by request. #}
 </div>
 
 <script>
@@ -793,7 +652,32 @@ document.querySelectorAll('.tab').forEach(function(tab) {
         strengths: {{ (formatting_result.passes|default([]))|tojson }}
     };
 
-    var issues = feedback.issues || [];
+    var sectionFeedback = {{ (section_feedback|default({}))|tojson }};
+
+    function collectSectionTips(source) {
+        var keys = ['contact', 'experience', 'education', 'skills', 'summary'];
+        var merged = [];
+
+        if (!source || typeof source !== 'object') {
+            return merged;
+        }
+
+        keys.forEach(function(key) {
+            var block = source[key];
+            var status = block && block.status ? String(block.status).toLowerCase() : '';
+            if (block && status !== 'good' && Array.isArray(block.tips)) {
+                block.tips.forEach(function(tip) {
+                    if (tip && String(tip).trim()) {
+                        merged.push(String(tip).trim());
+                    }
+                });
+            }
+        });
+
+        return Array.from(new Set(merged));
+    }
+
+    var issues = collectSectionTips(sectionFeedback);
     var strengths = feedback.strengths || [];
 
     var issueCountBadge = document.getElementById('issueCountBadge');
@@ -825,13 +709,13 @@ document.querySelectorAll('.tab').forEach(function(tab) {
     }
 
     // Create and render strength cards
-    function createStrengthCard(text) {
+    function createStrengthCard(text, number) {
         var card = document.createElement('div');
         card.className = 'feedback-card feedback-card--strength';
         
         var icon = document.createElement('div');
         icon.className = 'feedback-card__icon';
-        icon.textContent = '✓';
+        icon.textContent = String(number || '');
         
         var textEl = document.createElement('p');
         textEl.className = 'feedback-card__text';
@@ -857,14 +741,14 @@ document.querySelectorAll('.tab').forEach(function(tab) {
         emptyMsg.style.color = '#64748b';
         emptyMsg.style.fontStyle = 'italic';
         emptyMsg.style.margin = '0';
-        emptyMsg.textContent = 'No issues detected.';
+        emptyMsg.textContent = 'No section tips available.';
         issuesContainer.appendChild(emptyMsg);
     }
 
     // Render strengths
     if (strengths.length > 0) {
-        strengths.forEach(function(strength) {
-            strengthsContainer.appendChild(createStrengthCard(strength));
+        strengths.forEach(function(strength, index) {
+            strengthsContainer.appendChild(createStrengthCard(strength, index + 1));
         });
     } else {
         var emptyMsg = document.createElement('p');
