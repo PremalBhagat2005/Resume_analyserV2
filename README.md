@@ -159,7 +159,13 @@ python run.py
 - Compatible with Vercel, Heroku, and other WSGI-compatible platforms
 - vercel.json configured for Python runtime
 
-## License
 
-MIT
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+Built with ❤️ by [Premal](https://github.com/PremalBhagat2005)
 
