@@ -3,35 +3,33 @@
 
 {% block content %}
 
-<section class="hero">
-    <div class="hero__badge">AI-Powered · Free · Instant Results</div>
-    <h1 class="hero__title">
-        Know exactly how your<br>
-        <span class="hero__accent">resume performs</span>
-    </h1>
-    <p class="hero__subtitle">
-        Upload your resume for an instant ATS score, skill extraction,
-        work experience detection, and optional job description matching.
-    </p>
-    <div class="hero__stats">
-        <div class="stat">
-            <span class="stat__number">100</span>
-            <span class="stat__label">ATS Score Points</span>
+<section class="hero hero--stitch">
+    <div class="hero__copy">
+        <div class="hero__badge">AI-powered · Instant · Private</div>
+        <h1 class="hero__title">
+            Land Your Dream Job with
+            <span class="hero__accent">AI-Powered Resume Analysis</span>
+        </h1>
+        <p class="hero__subtitle">
+            Optimize your resume for ATS, match key skills, and get consultant-grade
+            feedback in seconds.
+        </p>
+        <div class="hero__actions">
+            <a class="btn btn--primary" href="#upload">Analyze My Resume Now</a>
+            <a class="btn btn--outline" href="#sample">View Sample Report</a>
         </div>
-        <div class="stat__divider"></div>
-        <div class="stat">
-            <span class="stat__number">6</span>
-            <span class="stat__label">Scoring Sections</span>
-        </div>
-        <div class="stat__divider"></div>
-        <div class="stat">
-            <span class="stat__number">AI</span>
-            <span class="stat__label">HuggingFace Powered</span>
-        </div>
+    </div>
+
+    <div class="hero__visual" aria-hidden="true">
+        <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWqNYqH1pf0VqYtAAHDgasczRQtLnp0lygPrmdwEms3lLdAjK8tkUKlAJq90Vc-zs8BldwTJOHV6CeFilTirI7NQ0n1bz5ZLfnTc-x8vz353VYJZl63498gxDCWEyFTlvkSd-NC2R26u46RJQkkn8dbMgGn3rpv1ULnvv1kYIL1v-8k3-wFM1UDAtsmtspO_DP9THxpTSqCv4nTWkbE1zzAC2BYhwPkWdlkE3QxCtnT2O64-Y9DAUitiS709oLVe_8SjN5LojmIi7s"
+            alt="AI resume analysis dashboard"
+            class="hero__image"
+        />
     </div>
 </section>
 
-<section class="upload-section">
+<section class="upload-section" id="upload">
     <div class="upload-card">
 
         {% if error %}
@@ -57,7 +55,7 @@
                            required
                            class="file-drop__input"/>
                     <div id="fileDropContent">
-                        <div class="file-drop__icon">FILE</div>
+                        <div class="file-drop__icon">⬆</div>
                         <div class="file-drop__text">
                             Drop your resume here or
                             <span class="file-drop__browse">browse</span>
@@ -84,7 +82,7 @@
             <button type="submit"
                     class="btn btn--primary btn--full"
                     id="analyseBtn">
-                Analyse Resume 
+                Analyse Resume
             </button>
 
         </form>
@@ -142,7 +140,7 @@
     </aside>
 </section>
 
-<section class="account-section">
+<section class="account-section" id="sample">
     <div class="account-card">
         {% if session.get('user_id') %}
         <h2 class="account-card__title">Your scores are now being saved</h2>
