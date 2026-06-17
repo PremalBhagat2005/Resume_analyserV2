@@ -16,7 +16,8 @@ Flask-based web application that scores ATS readiness, extracts key resume entit
 - Skills extraction using Hugging Face NER with fallback keyword matching
 - Education and work experience extraction using pattern-based parsing
 - Optional job match scoring with matched and missing keywords
-- Interactive web dashboard with charts and detailed analysis
+- Interactive **Chart.js Radar Chart** for visualizing ATS category strengths
+- **Advanced PDF Extraction**: Captures hidden hyperlink URIs (GitHub, LinkedIn) directly from document annotations
 - Account creation and sign-in using MongoDB
 - Saved analysis history (ATS scores) for signed-in users
 - **Fast performance** with parallel API calls and HF cold-start retry logic
