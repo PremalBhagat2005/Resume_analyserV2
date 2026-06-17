@@ -87,15 +87,21 @@ def generate_section_feedback(
         """Returns True only if entries have title AND
         at least some description or company info."""
         for exp in exp_list:
-            title = (exp.get("title") or "").strip()
-            desc = (exp.get("description") or "").strip()
-            company = (exp.get("company") or "").strip()
-            # Must have a title with more than 2 words
-            # OR a description with more than 5 words
-            # OR a company name
-            if (len(title.split()) >= 2 or
-                len(desc.split()) >= 5 or
-                len(company.split()) >= 1):
+            title = exp.get("title") or ""
+            title = title if isinstance(title, str) else str(title)
+            
+            desc = exp.get("description") or ""
+            if isinstance(desc, list):
+                desc = " ".join(str(d) for d in desc)
+            elif not isinstance(desc, str):
+                desc = str(desc)
+                
+            company = exp.get("company") or ""
+            company = company if isinstance(company, str) else str(company)
+            
+            if (len(title.strip().split()) >= 2 or
+                len(desc.strip().split()) >= 5 or
+                len(company.strip().split()) >= 1):
                 return True
         return False
 

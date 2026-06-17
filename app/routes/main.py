@@ -11,6 +11,7 @@ from app.services.parser import extract_text
 from app.services.hf_client import call_ner_model, extract_name_fallback
 from app.services.ats_scorer import calculate_ats_score
 from app.services.matcher import match_resume_to_job
+from app.services.jd_review import generate_jd_review
 from app.services.experience_extractor import (
     extract_work_experience, extract_education
 )
@@ -215,14 +216,31 @@ def analyse():
             name = extract_name_fallback(resume_text)
         email = ner_result.get("email", "")
         phone = ner_result.get("phone", "")
+        
+        import re
+        github_match = re.search(r'(https?://(?:www\.)?github\.com/[A-Za-z0-9_-]+)', resume_text, re.IGNORECASE)
+        github = github_match.group(1) if github_match else ""
+
+        linkedin_match = re.search(r'(https?://(?:www\.|[a-z]{2}\.)?linkedin\.com/in/[A-Za-z0-9_-]+)', resume_text, re.IGNORECASE)
+        linkedin = linkedin_match.group(1) if linkedin_match else ""
+
         raw_keywords = ner_result.get("keywords", [])
 
         # Skills and keyword cleanup
         extracted_skills = extract_skills_from_keywords(raw_keywords)
         extracted_keywords = clean_keywords(raw_keywords)
 
-        # Education extraction (can run independently)
-        education = extract_education(resume_text)
+        # Experience extraction fallback
+        ner_experience = ner_result.get("experience", [])
+        if ner_experience and isinstance(ner_experience[0], dict):
+            work_experience = ner_experience
+
+        # Education extraction
+        ner_education = ner_result.get("education", [])
+        if ner_education and isinstance(ner_education[0], dict):
+            education = ner_education
+        else:
+            education = extract_education(resume_text)
 
         # ATS scoring (6 sections, total 100)
         ats_entities = {
@@ -240,9 +258,16 @@ def analyse():
 
         # Job match analysis
         job_match = None
+        job_review = None
         if job_description:
             job_match = match_resume_to_job(
                 resume_text, job_description
+            )
+            job_review = generate_jd_review(
+                resume_text=resume_text,
+                job_description=job_description,
+                job_match=job_match,
+                extracted_skills=extracted_skills,
             )
 
         # Restore analytics chart generation with graceful fallback.
@@ -284,12 +309,24 @@ def analyse():
             "length": "Resume Length",
             "resume_length": "Resume Length",
         }
-        breakdown_display = {
-            breakdown_labels.get(
-                k.lower(), k.replace("_", " ").title()
-            ): v
-            for k, v in breakdown.items()
+        # Define the exact max points for each ATS section to avoid hardcoding
+        max_points_map = {
+            "contact_info": 20,
+            "skills_section": 20,
+            "education_section": 15,
+            "experience_section": 15,
+            "action_verbs_keywords": 20,
+            "resume_length": 10
         }
+
+        breakdown_display = {}
+        for k, v in breakdown.items():
+            label = breakdown_labels.get(k.lower(), k.replace("_", " ").title())
+            total_possible = max_points_map.get(k.lower(), 20)
+            breakdown_display[label] = {
+                "earned": v,
+                "total": total_possible
+            }
 
         word_count = len(resume_text.split())
 
@@ -318,10 +355,19 @@ def analyse():
         # Keyword gap categories (only if JD + job_match)
         keyword_gaps = None
         if job_match and job_description:
+            missing_for_gaps = []
+            if job_review and job_review.get("missing_skills"):
+                missing_for_gaps = job_review.get("missing_skills")
+            else:
+                missing_for_gaps = job_match.get("missing_keywords", [])
+                
+            current_score = (job_review or {}).get("match_score") or job_match.get("match_score", 0)
+
             keyword_gaps = categorise_keyword_gaps(
                 resume_text=resume_text,
                 job_description=job_description,
-                current_missing=job_match.get("missing_keywords", []),
+                current_missing=missing_for_gaps,
+                current_score=current_score,
             )
 
     finally:
@@ -356,6 +402,8 @@ def analyse():
         name=name,
         email=email,
         phone=phone,
+        github=github,
+        linkedin=linkedin,
         extracted_skills=extracted_skills,
         extracted_keywords=extracted_keywords,
         work_experience=work_experience,
@@ -370,4 +418,5 @@ def analyse():
         section_feedback=section_feedback,
         role_ats=role_ats,
         keyword_gaps=keyword_gaps,
+        job_review=job_review,
     )

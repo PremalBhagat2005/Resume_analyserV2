@@ -27,6 +27,7 @@ def categorise_keyword_gaps(
     resume_text: str,
     job_description: str,
     current_missing: list,
+    current_score: int = None,
 ) -> dict:
     """
     Takes the existing missing keywords list and categorises them.
@@ -66,8 +67,6 @@ def categorise_keyword_gaps(
         ):
             tools.append(kw)
         elif (
-            # Heuristic: short words (1-2) that appear in JD
-            # but not resume = likely technical terms
             len(kw_lower.split()) <= 2
             and kw_lower not in resume_lower
         ):
@@ -75,20 +74,18 @@ def categorise_keyword_gaps(
         else:
             domain.append(kw)
 
-    # Score simulation
-    # Estimate: each added keyword raises match score by ~3pts
-    # capped at 95
     all_missing = technical + soft_skills + tools + domain
     keywords_to_add = all_missing[:5]
-    score_gain = min(len(keywords_to_add) * 4, 30)
+    raw_score_gain = min(len(keywords_to_add) * 4, 30)
 
-    # Try to read current match score from job_description context
-    # (caller should pass it; here we estimate from gap size)
-    gap_ratio = len(all_missing) / max(
-        len(jd_lower.split()), 1
-    )
-    est_current = max(10, 100 - int(gap_ratio * 200))
-    est_potential = min(95, est_current + score_gain)
+    if current_score is not None:
+        est_current = current_score
+    else:
+        gap_ratio = len(all_missing) / max(len(jd_lower.split()), 1)
+        est_current = max(10, 100 - int(gap_ratio * 200))
+
+    est_potential = min(100, est_current + raw_score_gain)
+    actual_score_gain = est_potential - est_current
 
     return {
         "technical": technical,
@@ -99,6 +96,6 @@ def categorise_keyword_gaps(
             "current_score": est_current,
             "potential_score": est_potential,
             "keywords_to_add": keywords_to_add,
-            "score_gain": score_gain,
+            "score_gain": actual_score_gain,
         },
     }

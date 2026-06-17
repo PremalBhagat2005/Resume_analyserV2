@@ -73,6 +73,10 @@ STOPWORDS = {
     'backend', 'frontend', 'fullstack',
     'absolute', 'accuracy', 'accurate', 'actionable', 'action',
     'adherence', 'adopt', 'adoption', 'aiforbetterhealthcare',
+    'ambiguity', 'attention', 'bangalore', 'better', 'conceiving',
+    'constant', 'communications', 'able', 'ability',
+    'consumer', 'content', 'curating', 'customer', 'customers',
+    'day-to-day', 'detail', 'defining',
 }
 
 

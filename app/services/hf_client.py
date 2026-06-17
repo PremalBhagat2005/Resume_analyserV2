@@ -1,145 +1,86 @@
-import requests
+import json
 import os
-import time
 import re
+import time
+from difflib import SequenceMatcher
 from typing import Dict, List, Any
 
-HF_API_KEY = os.getenv('HF_API_KEY')
-HF_API_URL = "https://api-inference.huggingface.co/models"
+from google import genai
 
-NER_MODEL = "yashpwr/resume-ner-bert-v2"
-SIMILARITY_MODEL = "anass1209/resume-job-matcher-all-MiniLM-L6-v2"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
 MAX_RETRIES = 3
 RETRY_DELAY = 2
+USE_GEMINI_SEMANTIC_SIMILARITY = os.getenv("USE_GEMINI_SEMANTIC_SIMILARITY", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 
-def hf_post_with_retry(api_url, payload, headers, max_wait=60):
-    """
-    POST to HF API with retry logic for model cold start (503 loading).
-    Retries up to max_wait seconds total.
-    
-    Args:
-        api_url: Full HF API URL
-        payload: Request payload dict
-        headers: HTTP headers dict
-        max_wait: Maximum total seconds to retry
-    
-    Returns:
-        requests.Response object or None if all retries failed
-    """
-    start = time.time()
-    attempt = 0
-
-    while time.time() - start < max_wait:
-        attempt += 1
-        try:
-            resp = requests.post(
-                api_url,
-                headers=headers,
-                json=payload,
-                timeout=30
-            )
-
-            if resp.status_code == 200:
-                return resp
-
-            if resp.status_code == 503:
-                body = {}
-                try:
-                    body = resp.json()
-                except Exception:
-                    pass
-
-                estimated_wait = body.get('estimated_time', 10)
-                estimated_wait = min(float(estimated_wait), 20)
-
-                elapsed = time.time() - start
-                print(f"[HF] Model loading (503), waiting {estimated_wait:.0f}s "
-                      f"(attempt {attempt}, elapsed {elapsed:.0f}s)")
-                time.sleep(estimated_wait)
-                continue
-
-            # Other error — return immediately
-            print(f"[HF] Non-retryable error: {resp.status_code} {resp.text[:200]}")
-            return resp
-
-        except requests.exceptions.Timeout:
-            print(f"[HF] Timeout on attempt {attempt}")
-            time.sleep(5)
-            continue
-        except Exception as e:
-            print(f"[HF] Request exception: {e}")
-            return None
-
-    elapsed = time.time() - start
-    print(f"[HF] Gave up after {elapsed:.0f}s")
-    return None
+def _get_gemini_client():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return None
+    return genai.Client(api_key=api_key)
 
 
-def get_headers():
-    """Get headers for HF API requests."""
-    return {
-        "Authorization": f"Bearer {HF_API_KEY}",
-        "Content-Type": "application/json"
-    }
+def _truncate_text(text: str, limit: int = 3500) -> str:
+    return str(text or "").strip()[:limit]
 
 
-def call_hf_api(model: str, payload: Dict[str, Any], max_retries: int = MAX_RETRIES) -> Dict:
-    """
-    Make a request to Hugging Face Inference API with retry logic.
-    
-    Args:
-        model: Model identifier
-        payload: Request payload
-        max_retries: Maximum number of retry attempts
-    
-    Returns:
-        dict: API response
-    
-    Raises:
-        Exception: If API call fails after retries
-    """
-    url = f"{HF_API_URL}/{model}"
-    headers = get_headers()
-    
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=30)
-            
-            # Handle model loading (503 error)
-            if response.status_code == 503:
-                if attempt < max_retries - 1:
-                    time.sleep(RETRY_DELAY * (attempt + 1))
-                    continue
-                raise Exception("Model is loading. Please try again in a moment.")
-            
-            # Handle rate limiting
-            if response.status_code == 429:
-                if attempt < max_retries - 1:
-                    time.sleep(RETRY_DELAY * (attempt + 2))
-                    continue
-                raise Exception("Rate limited. Please try again later.")
-            
-            # Handle other errors
-            if response.status_code >= 400:
-                raise Exception(f"API Error {response.status_code}: {response.text}")
-            
-            return response.json()
-        
-        except requests.exceptions.Timeout:
-            if attempt < max_retries - 1:
-                time.sleep(RETRY_DELAY)
-                continue
-            raise Exception("API request timeout. Please try again.")
-        
-        except requests.exceptions.RequestException as e:
-            if attempt < max_retries - 1:
-                time.sleep(RETRY_DELAY)
-                continue
-            raise Exception(f"API request failed: {str(e)}")
-    
-    raise Exception("API call failed after maximum retries")
+def _clean_json_text(text: str) -> str:
+    cleaned = str(text or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    return cleaned.strip()
+
+
+def _extract_json_payload(text: str) -> dict:
+    cleaned = _clean_json_text(text)
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+    raise ValueError("Gemini response did not contain valid JSON")
+
+
+def _gemini_generate_json(prompt: str) -> dict | None:
+    client = _get_gemini_client()
+    if client is None:
+        return None
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config={
+            "temperature": 0.2,
+            "response_mime_type": "application/json",
+        },
+    )
+    return _extract_json_payload(getattr(response, "text", "") or "")
+
+
+def _local_similarity_fallback(text_a: str, text_b: str) -> float | None:
+    words_a = {w for w in re.findall(r"[a-zA-Z0-9+#.]+", text_a.lower()) if len(w) > 2}
+    words_b = {w for w in re.findall(r"[a-zA-Z0-9+#.]+", text_b.lower()) if len(w) > 2}
+    if not words_a or not words_b:
+        return None
+
+    overlap = len(words_a & words_b)
+    union = len(words_a | words_b)
+    token_score = (overlap / union) if union else 0.0
+
+    normalized_a = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+#.\s]", " ", text_a.lower())).strip()
+    normalized_b = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+#.\s]", " ", text_b.lower())).strip()
+    sequence_score = SequenceMatcher(None, normalized_a, normalized_b).ratio()
+
+    blended = (token_score * 0.65) + (sequence_score * 0.35)
+    return round(max(0.0, min(1.0, blended)), 4)
 
 
 def extract_contact_info(resume_text: str) -> Dict[str, str]:
@@ -331,9 +272,6 @@ def get_semantic_similarity(text_a, text_b):
     Compute semantic similarity between two text inputs.
     Returns a float between 0 and 1, or None on failure.
     """
-    import time
-    import requests
-    
     # Guard: ensure both texts are strings and non-empty
     text_a = str(text_a or '').strip()
     text_b = str(text_b or '').strip()
@@ -341,82 +279,39 @@ def get_semantic_similarity(text_a, text_b):
     if not text_a or not text_b:
         print("[SIM] Empty text, skipping")
         return None
-    
-    # Truncate to safe length
-    text_a = text_a[:1500]
-    text_b = text_b[:1500]
-    
-    api_url = "https://api-inference.huggingface.co/models/anass1209/resume-job-matcher-all-MiniLM-L6-v2"
-    headers = {"Authorization": f"Bearer {os.getenv('HF_API_KEY')}"}
-    
-    payload = {
-        "inputs": {
-            "source_sentence": text_a,
-            "sentences": [text_b]
-        }
-    }
-    
-    print(f"[SIM] Sending request, text_a length: {len(text_a)}, text_b length: {len(text_b)}")
 
+    # Default to deterministic local similarity so resume analysis stays within
+    # Gemini RPM limits. Opt in to Gemini only when explicitly enabled.
+    if not USE_GEMINI_SEMANTIC_SIMILARITY:
+        fallback = _local_similarity_fallback(text_a, text_b)
+        print(f"[SIM] Using local similarity score: {fallback}")
+        return fallback
+    
     try:
-        response = hf_post_with_retry(
-            api_url,
-            payload,
-            headers,
-            max_wait=60
+        prompt = (
+            "You compare two text snippets for semantic similarity. "
+            "Return ONLY valid JSON with keys score and reason. "
+            "score must be a number from 0 to 1 where 1 means nearly identical meaning. "
+            "Use meaning, not exact word overlap. "
+            f"Text A: {_truncate_text(text_a)}\n"
+            f"Text B: {_truncate_text(text_b)}"
         )
-        
-        print(f"[SIM] Status: {response.status_code if response else 'None'}")
-        print(f"[SIM] Body: {response.text[:300] if response else 'None'}")
-        
-        if response is None:
-            print("[SIM] No response from API")
-            return None
-        
-        if response.status_code == 503:
-            try:
-                body = response.json()
-                wait = min(float(body.get('estimated_time', 15)), 25)
-                print(f"[SIM] Model loading, waiting {wait}s...")
-                time.sleep(wait)
-                # Retry once
-                response = requests.post(api_url, headers=headers,
-                                         json=payload, timeout=30)
-                print(f"[SIM] Retry status: {response.status_code}")
-                print(f"[SIM] Retry body: {response.text[:300]}")
-            except Exception as e:
-                print(f"[SIM] Retry failed: {e}")
-                return None
-        
-        if response.status_code != 200:
-            print(f"[SIM] API error: {response.status_code}")
-            return None
 
-        result = response.json()
-        print(f"[SIM] Raw result: {result}")
-        
-        if isinstance(result, list) and len(result) > 0:
-            value = result[0]
-            if isinstance(value, list) and len(value) > 0:
-                value = value[0]
-            score = round(float(value), 4)
-            print(f"[SIM] Parsed score: {score}")
+        print(f"[SIM] Sending Gemini request, text_a length: {len(text_a)}, text_b length: {len(text_b)}")
+        result = _gemini_generate_json(prompt)
+        if isinstance(result, dict) and "score" in result:
+            score = round(float(result["score"]), 4)
+            print(f"[SIM] Parsed Gemini score: {score}")
             return score
 
-        if isinstance(result, dict):
-            for key in ["similarity", "score", "cosine_similarity"]:
-                if key in result:
-                    score = round(float(result[key]), 4)
-                    print(f"[SIM] Parsed score from key '{key}': {score}")
-                    return score
-
-        print(f"[SIM] Unexpected response format: {result}")
-        return None
+        fallback = _local_similarity_fallback(text_a, text_b)
+        print(f"[SIM] Gemini unavailable, fallback score: {fallback}")
+        return fallback
     except Exception as e:
         print(f"[SIM] Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+        fallback = _local_similarity_fallback(text_a, text_b)
+        print(f"[SIM] Fallback score after error: {fallback}")
+        return fallback
 
 
 def get_section_similarities(resume_sections, jd_text):
@@ -602,46 +497,51 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
         "experience": []
     }
     
-    # Use NER ONLY for skills extraction
     try:
-        payload = {
-            "inputs": resume_text
-        }
-        
-        response = call_hf_api(NER_MODEL, payload)
-        
-        print(f"[DEBUG NER] Using NER model for skills extraction. Response type: {type(response)}")
-        
-        # Parse NER response - extract skills ONLY
-        if isinstance(response, list) and len(response) > 0:
-            if isinstance(response[0], list):
-                for token_group in response[0]:
-                    entity_group = token_group.get('entity_group', '').upper() if token_group.get('entity_group') else ''
-                    score = token_group.get('score', 0)
-                    word = token_group.get('word', '').strip()
-                    
-                    if score < 0.5:  # Skip low confidence predictions
-                        continue
-                    
-                    # Extract SKILLS only from NER
-                    if ('SKILLS' in entity_group or 'SKILL' in entity_group) and word:
-                        if word not in entities['skills']:
-                            entities['skills'].append(word)
-        
-        # Fallback: if NER didn't find skills, use keyword matching
-        if not entities['skills']:
-            entities['skills'] = extract_skills_fallback(resume_text)
-        
-        print(f"[DEBUG NER] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
-        print(f"[DEBUG NER] Extracted skills via NER: {len(entities['skills'])} skills found")
+        prompt = (
+            "Extract resume information and return ONLY valid JSON with keys name, email, phone, skills, education, experience. "
+            "skills must be a list of short technical skills. "
+            "education must be a list of objects with keys: institution, degree, location, year. Ensure separate schools are separate objects. "
+            "experience must be a list of objects with keys: title, company, duration, description. The 'description' must be an array of string bullet points. Ensure separate roles are separate objects. "
+            f"Resume text: {_truncate_text(resume_text, 6000)}"
+        )
+
+        result = _gemini_generate_json(prompt)
+        if isinstance(result, dict):
+            skills = result.get("skills") or []
+            if isinstance(skills, list) and skills:
+                entities["skills"] = [str(skill).strip() for skill in skills if str(skill).strip()][:15]
+            else:
+                entities["skills"] = extract_skills_fallback(resume_text)
+
+            print(
+                f"[DEBUG Gemini] Extracted contact via regex: Name={entities['name']}, "
+                f"Email={entities['email']}, Phone={entities['phone']}"
+            )
+            print(f"[DEBUG Gemini] Extracted skills via Gemini: {len(entities['skills'])} skills found")
+
+            if isinstance(result.get("name"), str) and result.get("name").strip():
+                entities["name"] = result["name"].strip()
+            if isinstance(result.get("email"), str) and result.get("email").strip():
+                entities["email"] = result["email"].strip()
+            if isinstance(result.get("phone"), str) and result.get("phone").strip():
+                entities["phone"] = result["phone"].strip()
+            if isinstance(result.get("education"), list) and result.get("education"):
+                entities["education"] = result.get("education")
+            if isinstance(result.get("experience"), list) and result.get("experience"):
+                entities["experience"] = result.get("experience")
+
+            return entities
+
+        entities['skills'] = extract_skills_fallback(resume_text)
+        print(f"[DEBUG Gemini] Gemini unavailable, using fallback skills: {len(entities['skills'])} skills found")
         return entities
     
     except Exception as api_error:
-        # API failed, use fallback for skills
-        print(f"[DEBUG NER] API error during skills extraction, using fallback: {str(api_error)}")
+        print(f"[DEBUG Gemini] API error during skills extraction, using fallback: {str(api_error)}")
         entities['skills'] = extract_skills_fallback(resume_text)
-        print(f"[DEBUG NER] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
-        print(f"[DEBUG NER] Extracted skills via fallback: {len(entities['skills'])} skills found")
+        print(f"[DEBUG Gemini] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
+        print(f"[DEBUG Gemini] Extracted skills via fallback: {len(entities['skills'])} skills found")
         return entities
 
 
@@ -676,37 +576,36 @@ def get_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:
         dict: Similarity score (0-100) and matched keywords
     """
     try:
-        payload = {
-            "inputs": {
-                "source_sentence": resume_text,
-                "sentences": [job_description]
+        prompt = (
+            "Compare the resume and job description for fit. Return ONLY valid JSON with keys match_score, "
+            "matched_keywords, missing_keywords. match_score must be an integer 0-100. "
+            "matched_keywords and missing_keywords must be short phrase arrays. "
+            f"Resume: {_truncate_text(resume_text, 5000)}\n"
+            f"Job description: {_truncate_text(job_description, 5000)}"
+        )
+
+        result = _gemini_generate_json(prompt)
+        if isinstance(result, dict):
+            matched_keywords = result.get("matched_keywords") or []
+            missing_keywords = result.get("missing_keywords") or []
+            return {
+                "match_score": max(0, min(100, int(result.get("match_score") or 0))),
+                "matched_keywords": [str(item).strip() for item in matched_keywords if str(item).strip()][:20],
+                "missing_keywords": [str(item).strip() for item in missing_keywords if str(item).strip()][:20],
             }
-        }
-        
-        response = call_hf_api(SIMILARITY_MODEL, payload)
-        
-        # Parse similarity response
-        match_score = 0
-        
-        if isinstance(response, list) and len(response) > 0:
-            # Similarity score is typically between 0-1, scale to 0-100
-            match_score = int(response[0] * 100) if isinstance(response[0], (int, float)) else 0
-        
-        # Extract keywords from both texts for comparison
+
         resume_words = set(resume_text.lower().split())
         job_words = set(job_description.lower().split())
-        
         matched_keywords = list(resume_words & job_words)
         missing_keywords = list(job_words - resume_words)
-        
         return {
-            "match_score": max(0, min(100, match_score)),
+            "match_score": max(0, min(100, int((len(matched_keywords) / len(job_words)) * 100))) if job_words else 0,
             "matched_keywords": matched_keywords[:20],
             "missing_keywords": missing_keywords[:20]
         }
     
     except Exception as api_error:
-        # Fallback: Simple keyword matching without API
+        # Fallback: Simple keyword matching without Gemini
         resume_words = set(word.lower() for word in resume_text.split() if len(word) > 3)
         job_words = set(word.lower() for word in job_description.split() if len(word) > 3)
         

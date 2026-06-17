@@ -32,6 +32,13 @@ def parse_pdf(file):
                     extra_attrs=["size", "fontname"],
                 )
 
+                if hasattr(page, 'hyperlinks') and page.hyperlinks:
+                    for hl in page.hyperlinks:
+                        uri = hl.get("uri")
+                        if uri:
+                            text_parts.append(uri)
+
+
                 if not words:
                     page_text = page.extract_text(x_tolerance=3, y_tolerance=3)
                     if page_text:
@@ -55,7 +62,7 @@ def parse_pdf(file):
 
         cleaned_lines = []
         for line in full_text.splitlines():
-            line = re.sub(r'[^\w\s.,;:\'"@()\-#]', '', line).strip()
+            line = re.sub(r'[^\w\s.,;:\'"@()\-#/=&?+]', '', line).strip()
             line = re.sub(r'\s+', ' ', line).strip()
             if line:
                 cleaned_lines.append(line)
@@ -72,7 +79,7 @@ def parse_pdf(file):
 
             cleaned_lines = []
             for line in text.splitlines():
-                line = re.sub(r'[^\w\s.,;:\'"@()\-#]', '', line).strip()
+                line = re.sub(r'[^\w\s.,;:\'"@()\-#/=&?+]', '', line).strip()
                 line = re.sub(r'\s+', ' ', line).strip()
                 if line:
                     cleaned_lines.append(line)
@@ -92,7 +99,7 @@ def parse_pdf(file):
 
                 cleaned_lines = []
                 for line in text.splitlines():
-                    line = re.sub(r'[^\w\s.,;:\'"@()\-#]', '', line).strip()
+                    line = re.sub(r'[^\w\s.,;:\'"@()\-#/=&?+]', '', line).strip()
                     line = re.sub(r'\s+', ' ', line).strip()
                     if line:
                         cleaned_lines.append(line)
@@ -228,7 +235,7 @@ def parse_docx(file):
 
         cleaned_lines = []
         for line in sections_text:
-            line = re.sub(r'[^\w\s.,;:\'"@()\-#]', '', line).strip()
+            line = re.sub(r'[^\w\s.,;:\'"@()\-#/=&?+]', '', line).strip()
             line = re.sub(r'\s+', ' ', line).strip()
             if line:
                 cleaned_lines.append(line)

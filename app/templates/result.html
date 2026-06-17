@@ -97,15 +97,9 @@
                 <h3 class="chart-card__title">ATS Score Breakdown</h3>
                 <div class="css-chart">
                     {% for category, values in breakdown.items() %}
-                    {% if values is mapping %}
-                        {% set earned = values.get('earned', 0) %}
-                        {% set total  = values.get('total', 1)  %}
-                    {% else %}
-                        {% set earned = values %}
-                        {% set total  = 20 %}
-                    {% endif %}
-                    {% set pct = ((earned / total) * 100) | int
-                                 if total else 0 %}
+                        {% set earned = values.earned %}
+                        {% set total  = values.total %}
+                    {% set pct = ((earned * 100.0) / total) | round(0, 'floor') | int if total else 0 %}
                     <div class="css-bar-row">
                         <span class="css-bar-label">{{ category }}</span>
                         <div class="css-bar-track">
@@ -125,44 +119,12 @@
                 </div>
             </div>
 
-            <!-- Chart 2: Score gauge ring -->
+            <!-- Chart 2: Radar Chart -->
             <div class="chart-card">
-                <h3 class="chart-card__title">Overall Score</h3>
-                <div class="gauge-wrap">
-                    <div class="gauge-ring gauge-ring--{{ score_class }}"
-                         style="--pct: {{ score }};">
-                        <div class="gauge-ring__inner">
-                            <span class="gauge-ring__number">{{ score }}</span>
-                            <span class="gauge-ring__denom">/100</span>
-                        </div>
-                    </div>
-                    <span class="score-band score-band--{{ score_class }}">
-                        {{ score_band }}
-                    </span>
-                    <div class="gauge-legend">
-                        {% for category, values in breakdown.items() %}
-                        {% if values is mapping %}
-                            {% set earned = values.get('earned', 0) %}
-                            {% set total  = values.get('total', 1)  %}
-                        {% else %}
-                            {% set earned = values %}
-                            {% set total  = 20 %}
-                        {% endif %}
-                        <div class="gauge-legend__row">
-                            <span class="gauge-legend__dot
-                                {% if ((earned/total*100)|int) >= 80 %}dot--green
-                                {% elif ((earned/total*100)|int) >= 50 %}dot--blue
-                                {% elif ((earned/total*100)|int) >= 30 %}dot--amber
-                                {% else %}dot--red{% endif %}">
-                            </span>
-                            <span class="gauge-legend__name">
-                                {{ category }}
-                            </span>
-                            <span class="gauge-legend__score">
-                                {{ earned }}/{{ total }}
-                            </span>
-                        </div>
-                        {% endfor %}
+                <h3 class="chart-card__title">Category Strengths</h3>
+                <div class="gauge-wrap" style="display: flex; justify-content: center; align-items: center;">
+                    <div class="radar-chart-container" style="position: relative; height: 300px; width: 100%; margin-top: 1rem;">
+                        <canvas id="radarChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -274,12 +236,18 @@
         {% for label, value in [
             ("Name",  name),
             ("Email", email),
-            ("Phone", phone)
+            ("Phone", phone),
+            ("LinkedIn", linkedin),
+            ("GitHub", github)
         ] %}
         <div class="contact-card">
             <div class="contact-card__label">{{ label }}</div>
             <div class="contact-card__value">
-                {{ value or "Not detected" }}
+                {% if value and value.startswith('http') %}
+                    <a href="{{ value }}" target="_blank" style="color: #38bdf8; text-decoration: none;">{{ value }}</a>
+                {% else %}
+                    {{ value or "Not detected" }}
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -333,9 +301,17 @@
                 {% endif %}
             </div>
             {% if exp.description %}
-            <p class="timeline-card__desc">
-                {{ exp.description }}
-            </p>
+                {% if exp.description is string %}
+                <p class="timeline-card__desc">
+                    {{ exp.description }}
+                </p>
+                {% else %}
+                <ul class="timeline-card__desc" style="padding-left: 20px; margin-top: 8px; margin-bottom: 0;">
+                    {% for point in exp.description %}
+                    <li style="margin-bottom: 4px; line-height: 1.4;">{{ point }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
             {% endif %}
         </div>
         {% endfor %}
@@ -384,90 +360,72 @@
 </div>
 
 <div class="tab-panel" id="tab-jobmatch">
-{% if job_match %}
-    {% set ms = job_match.match_score %}
-    {% if ms >= 80 %}
-        {% set ms_class = "excellent" %}
-        {% set ms_band  = "Excellent Match" %}
-    {% elif ms >= 60 %}
-        {% set ms_class = "good" %}
-        {% set ms_band  = "Good Match" %}
-    {% elif ms >= 40 %}
-        {% set ms_class = "fair" %}
-        {% set ms_band  = "Moderate Match" %}
+{% if job_review %}
+    {% set jr = job_review %}
+    {% if jr.match_score >= 80 %}
+        {% set jr_class = "excellent" %}
+    {% elif jr.match_score >= 60 %}
+        {% set jr_class = "good" %}
+    {% elif jr.match_score >= 40 %}
+        {% set jr_class = "fair" %}
     {% else %}
-        {% set ms_class = "poor" %}
-        {% set ms_band  = "Low Match" %}
+        {% set jr_class = "poor" %}
     {% endif %}
 
+    <h2 class="section-title">JD Review</h2>
     <div class="match-hero">
         <div class="match-hero__score-wrap">
-            <div class="match-hero__score
-                        score-ring__number
-                        score-band--{{ ms_class }}">
-                {{ ms }}
+            <div class="match-hero__score score-ring__number score-band--{{ jr_class }}">
+                {{ jr.match_score }}
             </div>
             <div class="match-hero__denom">/ 100</div>
         </div>
         <div class="match-hero__info">
-            <span class="score-band score-band--{{ ms_class }}">
-                {{ ms_band }}
+            <span class="score-band score-band--{{ jr_class }}">
+                {{ jr.experience_fit }} Fit
             </span>
-            <div class="match-hero__bar-track">
-                <div class="match-hero__bar
-                    {% if ms >= 80 %}fill--green
-                    {% elif ms >= 60 %}fill--blue
-                    {% elif ms >= 40 %}fill--amber
-                    {% else %}fill--red{% endif %}"
-                    style="width:{{ ms }}%">
-                </div>
-            </div>
-            <p class="match-hero__feedback">
-                {{ job_match.feedback }}
-            </p>
+            <p class="match-hero__feedback">{{ jr.explanation }}</p>
         </div>
     </div>
 
     <div class="match-keywords-grid">
         <div class="card">
-            <h3 class="card-title card-title--green">
-                Matched
-                <span class="count-badge count-badge--green">
-                    {{ job_match.matched_keywords | length }}
-                </span>
-            </h3>
-            {% if job_match.matched_keywords %}
+            <h3 class="card-title card-title--green">Matched Skills</h3>
+            {% if jr.matched_skills %}
             <div class="pill-wrap">
-                {% for kw in job_match.matched_keywords %}
+                {% for kw in jr.matched_skills %}
                 <span class="pill pill--matched">{{ kw }}</span>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="empty-msg">No matched keywords.</p>
+            <p class="empty-msg">No matched skills returned.</p>
             {% endif %}
         </div>
 
         <div class="card">
-            <h3 class="card-title card-title--red">
-                Missing
-                <span class="count-badge count-badge--red">
-                    {{ job_match.missing_keywords | length }}
-                </span>
-            </h3>
-            {% if job_match.missing_keywords %}
+            <h3 class="card-title card-title--red">Missing Skills</h3>
+            {% if jr.missing_skills %}
             <div class="pill-wrap">
-                {% for kw in job_match.missing_keywords %}
+                {% for kw in jr.missing_skills %}
                 <span class="pill pill--missing">{{ kw }}</span>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="empty-msg empty-msg--success">
-                Resume covers all key job terms.
-            </p>
+            <p class="empty-msg empty-msg--success">No critical gaps returned.</p>
             {% endif %}
         </div>
     </div>
 
+    {% if jr.recommendations %}
+    <div class="card card--info">
+        <h3 class="card-title">Recommendations</h3>
+        <ul class="feedback-list">
+            {% for item in jr.recommendations %}
+            <li class="feedback-item">{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 {% else %}
     <div class="empty-state">
         <div class="empty-state__icon">Job</div>
@@ -760,6 +718,76 @@ document.querySelectorAll('.tab').forEach(function(tab) {
     }
 })();
 {% endif %}
+
+// Chart.js Radar Chart Initialization
+document.addEventListener("DOMContentLoaded", function() {
+    var ctx = document.getElementById('radarChart');
+    if (ctx) {
+        var data = {
+            labels: [
+                {% for category, values in breakdown.items() %}
+                    "{{ category }}",
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Score Percentage',
+                data: [
+                    {% for category, values in breakdown.items() %}
+                        {% set earned = values.earned %}
+                        {% set total  = values.total %}
+                        {{ ((earned * 100.0) / total) | round(0, 'floor') | int if total else 0 }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                borderColor: 'rgba(56, 189, 248, 0.8)',
+                pointBackgroundColor: 'rgba(56, 189, 248, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(56, 189, 248, 1)',
+                borderWidth: 2,
+            }]
+        };
+
+        var config = {
+            type: 'radar',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 100,
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: { 
+                            color: 'rgba(255, 255, 255, 0.7)', 
+                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: 600 } 
+                        },
+                        ticks: {
+                            display: false,
+                            stepSize: 20
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: "'Plus Jakarta Sans', sans-serif" },
+                        bodyFont: { family: "'Inter', sans-serif" },
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        new Chart(ctx.getContext('2d'), config);
+    }
+});
 </script>
 
 {% endblock %}
