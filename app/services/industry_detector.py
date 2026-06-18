@@ -2,7 +2,7 @@
 Detects the target industry/role from resume text.
 Uses keyword frequency - no hardcoded names.
 """
-from collections import Counter
+
 
 
 # Each industry has weighted signal terms.

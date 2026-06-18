@@ -314,14 +314,8 @@ def analyse():
             "resume_length": "Resume Length",
         }
         # Define the exact max points for each ATS section to avoid hardcoding
-        max_points_map = {
-            "contact_info": 20,
-            "skills_section": 20,
-            "education_section": 15,
-            "experience_section": 15,
-            "action_verbs_keywords": 20,
-            "resume_length": 10
-        }
+        from app.services.ats_scorer import ATS_MAX_POINTS
+        max_points_map = ATS_MAX_POINTS
 
         breakdown_display = {}
         for k, v in breakdown.items():

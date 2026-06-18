@@ -107,7 +107,7 @@ def extract_work_experience(text: str) -> list:
         r'(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*'
         r'[\s,]+)?'
         r'(?:19|20)\d{2}'
-        r'(?:\s*[–—\-\/to]+\s*'
+        r'(?:\s*(?:[–—\-/]+|to)\s*'
         r'(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*'
         r'[\s,]+)?'
         r'(?:(?:19|20)\d{2}|present|current|ongoing))?'
@@ -237,7 +237,6 @@ def extract_education(text: str) -> list:
 
     for i, line in enumerate(stripped_lines):
         line_lower = line.lower()
-        word_count = len(line.split())
 
         # Section start: line containing generic edu term at START
         if start_idx is None:
@@ -299,7 +298,7 @@ def extract_education(text: str) -> list:
         r'(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*'
         r'[\s,]+)?'
         r'(?:19|20)\d{2}'
-        r'(?:\s*[–—\-\/to]+\s*'
+        r'(?:\s*(?:[–—\-/]+|to)\s*'
         r'(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*'
         r'[\s,]+)?'
         r'(?:(?:19|20)\d{2}|present|current|ongoing))?'

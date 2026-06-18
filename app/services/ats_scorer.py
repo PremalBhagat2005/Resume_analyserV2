@@ -1,141 +1,17 @@
 import re
 import numpy as np
-from app.utils.helpers import (
-    check_action_verbs, score_action_verbs, extract_keywords, word_count,
-    extract_email, extract_phone
-)
+from app.utils.helpers import extract_keywords, word_count
 
-# Month names to filter out
-MONTH_NAMES = {
-    "january", "february", "march", "april", "may", "june", "july", "august", 
-    "september", "october", "november", "december",
-    "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"
+# Define the exact max points for each ATS section to avoid hardcoding
+ATS_MAX_POINTS = {
+    "contact_info": 20,
+    "skills_section": 20,
+    "education_section": 15,
+    "experience_section": 15,
+    "action_verbs_keywords": 20,
+    "resume_length": 10
 }
 
-# Filler words to filter out
-FILLER_WORDS = {
-    "passionate", "skilled", "motivated", "hardworking", "team", "player",
-    "detail", "oriented", "quick", "learner", "reached", "highest", "milestone",
-    "program", "developed", "collaborated", "synthesized", "remote", "intern",
-    "summary", "aspiring", "certified", "introduction", "participant", "tools",
-    "demo", "video", "crash", "course", "word", "soft", "west", "bengal",
-    "iit", "rae", "collaboratedwith", "spearheadedcross", "course", "program"
-}
-
-# Known city/location names to filter out
-LOCATION_NAMES = {
-    "guwahati", "delhi", "mumbai", "bangalore", "kolkata", "chennai", "hyderabad", "pune",
-    "india", "united", "states", "uk", "us", "new", "york", "los", "angeles", "san",
-    "francisco", "seattle", "austin", "chicago", "boston", "remote"
-}
-
-# Known technical skills to keep (expanded list)
-TECHNICAL_SKILLS = {
-    # Languages
-    "python", "java", "javascript", "typescript", "c++", "c#", "sql", "r", "go", "rust",
-    "kotlin", "swift", "php", "ruby", "scala", "bash", "shell", "groovy",
-    # Frontend
-    "react", "vue", "angular", "html", "css", "tailwind", "bootstrap", "webpack", "vite",
-    "next.js", "svelte", "jquery", "sass", "less",
-    # Backend & Frameworks
-    "node.js", "flask", "django", "fastapi", "express", "spring", "asp.net", "dotnet",
-    "rest", "graphql", "api", "microservices", "serverless", "lambda",
-    # Cloud & DevOps
-    "aws", "gcp", "azure", "docker", "kubernetes", "jenkins", "github", "gitlab",
-    "bitbucket", "terraform", "ansible", "ci/cd", "devops", "google cloud", "oracle cloud",
-    # Databases
-    "mysql", "postgresql", "mongodb", "redis", "cassandra", "elasticsearch", "firebase",
-    "dynamodb", "oracle", "mssql", "sqlite", "neo4j",
-    # AI/ML
-    "machine learning", "ml", "deep learning", "neural", "nlp", "tensorflow", "pytorch",
-    "scikit-learn", "keras", "ai", "artificial intelligence", "generative", "llm",
-    "hugging face", "opencv", "spacy", "pandas", "numpy",
-    # Tools & Platforms
-    "figma", "jira", "confluence", "slack", "postman", "linux", "ubuntu", "windows",
-    "macos", "docker", "git", "svn", "agile", "scrum", "kanban", "xp",
-    # Certifications & Standards
-    "google cloud", "aws certified", "azure certified", "certified", "scrum master",
-    # Soft skills (limited)
-    "leadership", "communication", "agile", "scrum", "teamwork", "problem-solving"
-}
-
-def clean_and_filter_keywords(keywords: list) -> list:
-    """
-    Aggressively clean keyword list, removing garbage values.
-    Keep only technical skills, tools, and domain terms.
-    """
-    cleaned = set()
-    
-    for keyword in keywords:
-        # Basic cleanup
-        kw = keyword.strip().lower()
-        
-        # Skip empty or very short keywords
-        if not kw or len(kw) < 3:
-            continue
-        
-        # Skip if it's purely numeric or starts with digit
-        if kw[0].isdigit() or kw.isdigit():
-            continue
-        
-        # Skip month names
-        if kw in MONTH_NAMES:
-            continue
-        
-        # Skip filler words
-        if kw in FILLER_WORDS:
-            continue
-        
-        # Skip location names
-        if kw in LOCATION_NAMES:
-            continue
-        
-        # Skip common single chars and articles
-        if kw in {"a", "i", "the", "and", "or", "of", "in", "to", "for", "with", "on", "at", "by"}:
-            continue
-        
-        # Skip if looks like a sentence fragment (contains numbers that look like years/dates)
-        if re.search(r'\b(19|20)\d{2}\b', kw):
-            continue
-        
-        # Skip if contains camelCase (likely not a real keyword)
-        if re.search(r'[a-z][A-Z]', keyword):
-            continue
-        
-        # Check if keyword is a known technical skill or domain term
-        # First, exact match
-        if kw in TECHNICAL_SKILLS:
-            cleaned.add(kw)
-            continue
-        
-        # Partial match for multi-word terms
-        is_technical = False
-        for skill in TECHNICAL_SKILLS:
-            if skill in kw or kw in skill:
-                is_technical = True
-                break
-        
-        if is_technical:
-            cleaned.add(kw)
-            continue
-        
-        # Check if it's an acronym (all caps, 2-4 chars)
-        if 2 <= len(kw) <= 4 and kw.isupper():
-            # Known technical acronyms
-            tech_acronyms = {
-                "api", "sql", "html", "css", "xml", "json", "http", "https", "ftp", "sftp",
-                "ssh", "git", "aws", "gcp", "ml", "ai", "iot", "saas", "paas", "iaas",
-                "ci", "cd", "etl", "orm", "mvc", "mvvm", "rest", "soap", "orm", "oop"
-            }
-            if kw in tech_acronyms:
-                cleaned.add(kw)
-                continue
-    
-    # Convert back to proper case and deduplicate (case-insensitive)
-    result = sorted(list(cleaned))
-    
-    # Limit to 20 keywords, sorted alphabetically
-    return result[:20]
 
 
 def calculate_ats_score(resume_text: str, entities: dict = None) -> dict:
@@ -305,8 +181,6 @@ def calculate_ats_score(resume_text: str, entities: dict = None) -> dict:
     
     # 5. Action Verbs and Keywords (20 points) - MUCH STRICTER
     keywords = extract_keywords(resume_text)
-    cleaned_keywords = clean_and_filter_keywords(keywords)
-    action_verbs = check_action_verbs(resume_text)
     
     action_verbs_list = [
         'led', 'managed', 'built', 'developed', 'designed', 'implemented', 'created', 'delivered',
@@ -433,7 +307,7 @@ def calculate_ats_score(resume_text: str, entities: dict = None) -> dict:
     return {
         'score': score,
         'breakdown': breakdown,
-        'extracted_keywords': cleaned_keywords,
+        'extracted_keywords': keywords,
         'missing_sections': missing_sections,
         'suggestions': suggestions,
         'word_count': word_count_value
@@ -461,7 +335,14 @@ def compute_ats_score_with_numpy(breakdown: dict) -> dict:
         breakdown.get('resume_length', 0)
     ], dtype=np.float32)
     
-    max_points = np.array([20, 20, 15, 15, 20, 10], dtype=np.float32)
+    max_points = np.array([
+        ATS_MAX_POINTS["contact_info"],
+        ATS_MAX_POINTS["skills_section"],
+        ATS_MAX_POINTS["education_section"],
+        ATS_MAX_POINTS["experience_section"],
+        ATS_MAX_POINTS["action_verbs_keywords"],
+        ATS_MAX_POINTS["resume_length"]
+    ], dtype=np.float32)
     
     # Compute statistics using NumPy
     normalized_scores = (sections / max_points) * 100  # Normalize to 0-100

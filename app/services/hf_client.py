@@ -1,9 +1,8 @@
 import json
 import os
 import re
-import time
 from difflib import SequenceMatcher
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 from google import genai
 
@@ -709,7 +708,7 @@ def get_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:
             "missing_keywords": missing_keywords[:20]
         }
     
-    except Exception as api_error:
+    except Exception:
         # Fallback: Simple keyword matching without Gemini
         resume_words = set(word.lower() for word in resume_text.split() if len(word) > 3)
         job_words = set(word.lower() for word in job_description.split() if len(word) > 3)

@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for web environment
 import matplotlib.pyplot as plt
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 
 class ResumeAnalytics:

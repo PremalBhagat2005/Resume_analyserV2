@@ -213,13 +213,6 @@ def generate_section_feedback(
         )
     else:
         # Check skill diversity
-        has_lang = any(
-            s.lower() in {
-                "python", "java", "javascript", "typescript",
-                "c++", "go", "rust", "sql", "r"
-            }
-            for s in extracted_skills
-        )
         has_cloud = any(
             s.lower() in {"aws", "gcp", "azure", "docker", "kubernetes"}
             for s in extracted_skills

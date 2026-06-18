@@ -194,14 +194,12 @@ def extract_skills_from_keywords(keywords: list) -> list:
 
         # 2. Check if any known skill is fully contained
         #    in the keyword or vice versa (handles "Node.js" -> "node")
-        matched = False
         for known in KNOWN_SKILLS:
             if len(known) >= 2 and (
                 known in kw_lower or
                 kw_lower in known
             ):
                 skills.append(kw_clean)
-                matched = True
                 break
 
     # Deduplicate preserving order, normalise to title case

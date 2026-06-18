@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, url_for, session, redirect, current_app, request, flash
+from flask import Blueprint, url_for, session, redirect
 from authlib.integrations.flask_client import OAuth
 from app.models.db import get_user_by_email, create_user
 
