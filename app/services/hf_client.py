@@ -50,6 +50,14 @@ def _extract_json_payload(text: str) -> dict:
 
 
 def _gemini_generate_json(prompt: str) -> dict | None:
+    from app.utils.cache import get_cache_key, get_cached_json, set_cached_json
+    
+    cache_key = get_cache_key("gemini_json", prompt)
+    cached_result = get_cached_json(cache_key)
+    if cached_result:
+        print("[CACHE HIT] _gemini_generate_json")
+        return cached_result
+
     client = _get_gemini_client()
     if client is None:
         return None
@@ -62,7 +70,10 @@ def _gemini_generate_json(prompt: str) -> dict | None:
             "response_mime_type": "application/json",
         },
     )
-    return _extract_json_payload(getattr(response, "text", "") or "")
+    result = _extract_json_payload(getattr(response, "text", "") or "")
+    if result:
+        set_cached_json(cache_key, result)
+    return result
 
 
 def _local_similarity_fallback(text_a: str, text_b: str) -> float | None:

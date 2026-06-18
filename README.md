@@ -19,8 +19,10 @@ Flask-based web application that scores ATS readiness, extracts key resume entit
 - Interactive **Chart.js Radar Chart** for visualizing ATS category strengths
 - **Advanced PDF Extraction**: Captures hidden hyperlink URIs (GitHub, LinkedIn) directly from document annotations
 - Account creation and sign-in using MongoDB
+- **Google OAuth Authentication** for seamless sign-in
 - Saved analysis history (ATS scores) for signed-in users
 - **Fast performance** with parallel API calls and HF cold-start retry logic
+- **Redis Caching**: Caches AI responses (Gemini) to make repeated resume analyses almost instantaneous
 
 ## Performance Optimizations
 
@@ -55,6 +57,9 @@ HF_API_KEY=your_hugging_face_api_key_here
 FLASK_ENV=development
 MONGO_URI=mongodb://localhost:27017/
 MONGO_DB_NAME=resume_analyser
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+REDIS_URL=redis://localhost:6379/0
 ```
 
 Notes:
@@ -62,6 +67,8 @@ Notes:
 - If HF calls fail, fallback logic still runs for key parts (skills and job matching)
 - Free-tier models may have cold-start delays (20-40s first use); automatic retry handles this
 - Set `MONGO_URI` to enable account and history features
+- Configure `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` for Google Authentication
+- Set `REDIS_URL` to enable caching for external AI API calls
 
 3. Start the app:
 
@@ -102,6 +109,7 @@ python run.py
 │   │   └── db.py
 │   ├── routes/
 │   │   ├── __init__.py
+│   │   ├── auth.py                  # Google OAuth routes
 │   │   └── main.py                  # /analyse endpoint with parallel processing
 │   ├── services/
 │   │   ├── __init__.py
@@ -127,6 +135,7 @@ python run.py
 │   │   └── uploads/                 # Temp file storage
 │   └── utils/
 │       ├── __init__.py
+│       ├── cache.py                 # Redis caching logic
 │       └── helpers.py
 ```
 
@@ -135,6 +144,8 @@ python run.py
 - `GET /` - Home page with resume upload form
 - `GET /signup` / `POST /signup` - Create account
 - `GET /signin` / `POST /signin` - Sign in
+- `GET /auth/login/google` - Sign in with Google
+- `GET /auth/callback` - Google OAuth callback
 - `GET /logout` - End user session
 - `GET /history` - View saved ATS score history (requires sign in)
 - `POST /analyse` - Analyze resume and job description

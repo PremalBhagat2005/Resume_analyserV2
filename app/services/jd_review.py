@@ -138,15 +138,24 @@ def generate_jd_review(
             f"\n\nJob description:\n{_truncate_text(job_description)}"
         )
 
-        response = client.models.generate_content(
-            model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
-            contents=prompt,
-            config={
-                "temperature": 0.2,
-                "response_mime_type": "application/json",
-            },
-        )
-        payload = _extract_json_payload(getattr(response, "text", "") or "")
+        from app.utils.cache import get_cache_key, get_cached_json, set_cached_json
+        cache_key = get_cache_key("jd_review_json", prompt)
+        payload = get_cached_json(cache_key)
+        
+        if payload:
+            print("[CACHE HIT] generate_jd_review")
+        else:
+            response = client.models.generate_content(
+                model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+                contents=prompt,
+                config={
+                    "temperature": 0.2,
+                    "response_mime_type": "application/json",
+                },
+            )
+            payload = _extract_json_payload(getattr(response, "text", "") or "")
+            if payload:
+                set_cached_json(cache_key, payload)
 
         return {
             "match_score": int(payload.get("match_score") or 0),
