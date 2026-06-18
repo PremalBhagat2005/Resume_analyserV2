@@ -41,6 +41,10 @@ def create_app():
 	from app.routes.main import main_bp
 	app.register_blueprint(main_bp)
 
+	from app.routes.auth import auth_bp, init_oauth
+	init_oauth(app)
+	app.register_blueprint(auth_bp)
+
 	from app.models.db import init_db
 	init_db(app)
 

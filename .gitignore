@@ -36,5 +36,5 @@ htmlcov/
 # Project Specific
 uploads/
 temp/
-static/plots/
+app/static/plots/
 *.log
