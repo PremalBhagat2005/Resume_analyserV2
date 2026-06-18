@@ -457,6 +457,69 @@ def extract_education_fallback(text: str) -> list:
     return result[:8]
 
 
+def extract_certificates_fallback(text: str) -> list:
+    """Extract certificates using section-based parsing instead of hardcoded keywords."""
+    lines = [l.strip() for l in (text or '').split('\n') if l.strip()]
+
+    cert_start_headers = [
+        'certifications', 'certification', 'certificates', 'certificate',
+        'courses', 'licenses', 'courses & certifications', 'licenses & certifications'
+    ]
+
+    stop_headers = [
+        'experience', 'work experience', 'employment', 'internship',
+        'projects', 'project', 'skills', 'core skills', 'technical skills',
+        'education', 'academic background', 'academic qualifications',
+        'awards', 'achievements', 'publications', 'interests', 'hobbies', 
+        'languages', 'summary', 'objective', 'profile', 'about', 'contact', 'references'
+    ]
+
+    cert_start_idx = None
+    for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+        if len(line.split()) <= 4:
+            clean_header = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', line_lower)
+            if any(clean_header == h for h in cert_start_headers):
+                cert_start_idx = i
+                break
+
+    if cert_start_idx is None:
+        return []
+
+    cert_lines = []
+    capturing = False
+
+    for i, line in enumerate(lines):
+        if i == cert_start_idx:
+            capturing = True
+            continue
+
+        if not capturing:
+            continue
+
+        line_lower = line.lower().strip()
+        
+        if len(line.split()) <= 4:
+            clean_header = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', line_lower)
+            if any(clean_header == h for h in stop_headers):
+                break
+
+        if len(line) < 5:
+            continue
+
+        cert_lines.append(line.strip())
+
+    result = []
+    seen = set()
+    for line in cert_lines:
+        key = line.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(line)
+
+    return result[:10]
+
+
 def extract_entities_fallback(text: str) -> Dict[str, Any]:
     """
     Fallback extraction using regex and pattern matching.
@@ -468,7 +531,8 @@ def extract_entities_fallback(text: str) -> Dict[str, Any]:
         "phone": extract_phone_fallback(text),
         "skills": extract_skills_fallback(text),
         "education": extract_education_fallback(text),
-        "experience": []
+        "experience": [],
+        "certificates": extract_certificates_fallback(text)
     }
 
 
@@ -494,15 +558,20 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
         "phone": contact_info['phone'],
         "skills": [],
         "education": extract_education_fallback(resume_text),  # Use fallback for education
-        "experience": []
+        "experience": [],
+        "certificates": extract_certificates_fallback(resume_text),
+        "projects": []
     }
     
     try:
         prompt = (
-            "Extract resume information and return ONLY valid JSON with keys name, email, phone, skills, education, experience. "
+            "Extract resume information and return ONLY valid JSON with keys name, email, phone, skills, education, experience, certificates, projects. "
             "skills must be a list of short technical skills. "
             "education must be a list of objects with keys: institution, degree, location, year. Ensure separate schools are separate objects. "
-            "experience must be a list of objects with keys: title, company, duration, description. The 'description' must be an array of string bullet points. Ensure separate roles are separate objects. "
+            "experience must be a list of objects with keys: title, company, duration, description. The 'description' must be an array of string bullet points. "
+            "CRITICAL: 'experience' is ONLY for employment/work history. DO NOT include personal or academic projects here. "
+            "projects must be a separate list of objects with keys: title, description (array of string bullet points). "
+            "certificates must be a list of strings representing the names of certifications obtained. "
             f"Resume text: {_truncate_text(resume_text, 6000)}"
         )
 
@@ -530,6 +599,29 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
                 entities["education"] = result.get("education")
             if isinstance(result.get("experience"), list) and result.get("experience"):
                 entities["experience"] = result.get("experience")
+            if isinstance(result.get("projects"), list) and result.get("projects"):
+                entities["projects"] = result.get("projects")
+            if isinstance(result.get("certificates"), list) and result.get("certificates"):
+                gemini_certs = [str(c).strip() for c in result["certificates"] if str(c).strip()]
+                combined_certs = entities["certificates"] + gemini_certs
+                deduped_certs = []
+                for c in combined_certs:
+                    c_clean = re.sub(r'[^a-z0-9]+', ' ', c.lower()).strip()
+                    if len(c_clean) < 3:
+                        continue
+                    is_duplicate = False
+                    for i, existing in enumerate(deduped_certs):
+                        existing_clean = re.sub(r'[^a-z0-9]+', ' ', existing.lower()).strip()
+                        if c_clean in existing_clean:
+                            is_duplicate = True
+                            break
+                        elif existing_clean in c_clean:
+                            is_duplicate = True
+                            deduped_certs[i] = c
+                            break
+                    if not is_duplicate:
+                        deduped_certs.append(c)
+                entities["certificates"] = deduped_certs
 
             return entities
 
@@ -560,6 +652,8 @@ def call_ner_model(resume_text: str) -> Dict[str, Any]:
         "skills": entities.get("skills", []),
         "education": entities.get("education", []),
         "experience": entities.get("experience", []),
+        "certificates": entities.get("certificates", []),
+        "projects": entities.get("projects", []),
     }
 
 

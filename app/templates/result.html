@@ -44,11 +44,10 @@
             </span>
             <p class="score-words">
                 {{ word_count }} words ·
-                {% if 300 <= word_count <= 800 %}
-                <span class="text-green">good length</span>
-                {% else %}
-                <span class="text-amber">aim for 300-800</span>
-                {% endif %}
+                {% if 300 <= word_count <=800 %} <span class="text-green">good length</span>
+                    {% else %}
+                    <span class="text-amber">aim for 300-800</span>
+                    {% endif %}
             </p>
         </div>
 
@@ -56,14 +55,14 @@
             <h2 class="card-title">Score Breakdown</h2>
             {% for category, values in breakdown.items() %}
             {% if values is mapping %}
-                {% set earned = values.get('earned', 0) %}
-                {% set total  = values.get('total', 1)  %}
+            {% set earned = values.get('earned', 0) %}
+            {% set total = values.get('total', 1) %}
             {% else %}
-                {% set earned = values %}
-                {% set total  = 20 %}
+            {% set earned = values %}
+            {% set total = 20 %}
             {% endif %}
             {% set pct = ((earned / total) * 100) | int
-                         if total else 0 %}
+            if total else 0 %}
             <div class="breakdown-row">
                 <span class="breakdown-row__name">
                     {{ category }}
@@ -73,8 +72,7 @@
                         {% if pct >= 80 %}fill--green
                         {% elif pct >= 50 %}fill--blue
                         {% elif pct >= 30 %}fill--amber
-                        {% else %}fill--red{% endif %}"
-                        style="width:{{ pct }}%">
+                        {% else %}fill--red{% endif %}" style="width:{{ pct }}%">
                     </div>
                 </div>
                 <span class="breakdown-row__score">
@@ -97,8 +95,8 @@
                 <h3 class="chart-card__title">ATS Score Breakdown</h3>
                 <div class="css-chart">
                     {% for category, values in breakdown.items() %}
-                        {% set earned = values.earned %}
-                        {% set total  = values.total %}
+                    {% set earned = values.earned %}
+                    {% set total = values.total %}
                     {% set pct = ((earned * 100.0) / total) | round(0, 'floor') | int if total else 0 %}
                     <div class="css-bar-row">
                         <span class="css-bar-label">{{ category }}</span>
@@ -107,8 +105,7 @@
                                 {% if pct >= 80 %}fill--green
                                 {% elif pct >= 50 %}fill--blue
                                 {% elif pct >= 30 %}fill--amber
-                                {% else %}fill--red{% endif %}"
-                                style="width: {{ pct }}%;">
+                                {% else %}fill--red{% endif %}" style="width: {{ pct }}%;">
                             </div>
                         </div>
                         <span class="css-bar-value">
@@ -123,7 +120,8 @@
             <div class="chart-card">
                 <h3 class="chart-card__title">Category Strengths</h3>
                 <div class="gauge-wrap" style="display: flex; justify-content: center; align-items: center;">
-                    <div class="radar-chart-container" style="position: relative; height: 300px; width: 100%; margin-top: 1rem;">
+                    <div class="radar-chart-container"
+                        style="position: relative; height: 300px; width: 100%; margin-top: 1rem;">
                         <canvas id="radarChart"></canvas>
                     </div>
                 </div>
@@ -136,7 +134,7 @@
     {% if readability_result %}
     <div class="analysis-section">
         <h2 class="section-title">Readability & Scannability</h2>
-        
+
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-card__label">Readability Score</div>
@@ -220,7 +218,8 @@
                 <div class="score-bar-sm">
                     <span class="score-bar-sm__label">{{ industry }}</span>
                     <div class="score-bar-sm__track">
-                        <div class="score-bar-sm__fill" style="width: {{ (score / industry_result.scores.values() | max * 100) | int }}%"></div>
+                        <div class="score-bar-sm__fill"
+                            style="width: {{ (score / industry_result.scores.values() | max * 100) | int }}%"></div>
                     </div>
                     <span class="score-bar-sm__value">{{ "%.1f"|format(score) }}</span>
                 </div>
@@ -234,24 +233,58 @@
     <h2 class="section-title">Contact Information</h2>
     <div class="contact-grid">
         {% for label, value in [
-            ("Name",  name),
-            ("Email", email),
-            ("Phone", phone),
-            ("LinkedIn", linkedin),
-            ("GitHub", github)
+        ("Name", name),
+        ("Email", email),
+        ("Phone", phone),
+        ("LinkedIn", linkedin),
+        ("GitHub", github)
         ] %}
         <div class="contact-card">
             <div class="contact-card__label">{{ label }}</div>
             <div class="contact-card__value">
                 {% if value and value.startswith('http') %}
-                    <a href="{{ value }}" target="_blank" style="color: #38bdf8; text-decoration: none;">{{ value }}</a>
+                <a href="{{ value }}" target="_blank" style="color: #38bdf8; text-decoration: none;">{{ value }}</a>
                 {% else %}
-                    {{ value or "Not detected" }}
+                {{ value or "Not detected" }}
                 {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
+
+    <h2 class="section-title">Education</h2>
+    {% if education %}
+    {% for edu in education %}
+    <div class="timeline-card timeline-card--purple">
+        <div class="timeline-card__header">
+            <div>
+                <div class="timeline-card__title">
+                    {{ edu.institution or "Institution" }}
+                </div>
+                {% if edu.degree %}
+                <div class="timeline-card__sub">
+                    {{ edu.degree }}
+                </div>
+                {% endif %}
+                {% if edu.location %}
+                <div class="timeline-card__location">
+                    Location: {{ edu.location }}
+                </div>
+                {% endif %}
+            </div>
+            {% if edu.year %}
+            <span class="timeline-card__date">
+                {{ edu.year }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card">
+        <p class="empty-msg">No education detected.</p>
+    </div>
+    {% endif %}
 
     <h2 class="section-title">Technical Skills</h2>
     <div class="card">
@@ -281,40 +314,40 @@
 
     <h2 class="section-title">Work Experience</h2>
     {% if work_experience %}
-        {% for exp in work_experience %}
-        <div class="timeline-card timeline-card--blue">
-            <div class="timeline-card__header">
-                <div>
-                    <div class="timeline-card__title">
-                        {{ exp.title or "Role" }}
-                    </div>
-                    {% if exp.company %}
-                    <div class="timeline-card__sub">
-                        {{ exp.company }}
-                    </div>
-                    {% endif %}
+    {% for exp in work_experience %}
+    <div class="timeline-card timeline-card--blue">
+        <div class="timeline-card__header">
+            <div>
+                <div class="timeline-card__title">
+                    {{ exp.title or "Role" }}
                 </div>
-                {% if exp.duration %}
-                <span class="timeline-card__date">
-                    {{ exp.duration }}
-                </span>
+                {% if exp.company %}
+                <div class="timeline-card__sub">
+                    {{ exp.company }}
+                </div>
                 {% endif %}
             </div>
-            {% if exp.description %}
-                {% if exp.description is string %}
-                <p class="timeline-card__desc">
-                    {{ exp.description }}
-                </p>
-                {% else %}
-                <ul class="timeline-card__desc" style="padding-left: 20px; margin-top: 8px; margin-bottom: 0;">
-                    {% for point in exp.description %}
-                    <li style="margin-bottom: 4px; line-height: 1.4;">{{ point }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
+            {% if exp.duration %}
+            <span class="timeline-card__date">
+                {{ exp.duration }}
+            </span>
             {% endif %}
         </div>
-        {% endfor %}
+        {% if exp.description %}
+        {% if exp.description is string %}
+        <p class="timeline-card__desc">
+            {{ exp.description }}
+        </p>
+        {% else %}
+        <ul class="timeline-card__desc" style="padding-left: 20px; margin-top: 8px; margin-bottom: 0;">
+            {% for point in exp.description %}
+            <li style="margin-bottom: 4px; line-height: 1.4;">{{ point }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
     {% else %}
     <div class="card">
         <p class="empty-msg">
@@ -323,53 +356,68 @@
     </div>
     {% endif %}
 
-    <h2 class="section-title">Education</h2>
-    {% if education %}
-        {% for edu in education %}
-        <div class="timeline-card timeline-card--purple">
-            <div class="timeline-card__header">
-                <div>
-                    <div class="timeline-card__title">
-                        {{ edu.institution or "Institution" }}
-                    </div>
-                    {% if edu.degree %}
-                    <div class="timeline-card__sub">
-                        {{ edu.degree }}
-                    </div>
-                    {% endif %}
-                    {% if edu.location %}
-                    <div class="timeline-card__location">
-                        Location: {{ edu.location }}
-                    </div>
-                    {% endif %}
+    <h2 class="section-title">Projects</h2>
+    {% if projects %}
+    {% for proj in projects %}
+    <div class="timeline-card timeline-card--green" style="border-left: 3px solid #10b981;">
+        <div class="timeline-card__header">
+            <div>
+                <div class="timeline-card__title" style="color: #10b981;">
+                    {{ proj.title or "Project" }}
                 </div>
-                {% if edu.year %}
-                <span class="timeline-card__date">
-                    {{ edu.year }}
-                </span>
-                {% endif %}
             </div>
         </div>
-        {% endfor %}
+        {% if proj.description %}
+        {% if proj.description is string %}
+        <p class="timeline-card__desc">
+            {{ proj.description }}
+        </p>
+        {% else %}
+        <ul class="timeline-card__desc" style="padding-left: 20px; margin-top: 8px; margin-bottom: 0;">
+            {% for point in proj.description %}
+            <li style="margin-bottom: 4px; line-height: 1.4;">{{ point }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
     {% else %}
     <div class="card">
-        <p class="empty-msg">No education detected.</p>
+        <p class="empty-msg">
+            No projects detected.
+        </p>
     </div>
     {% endif %}
+
+    <h2 class="section-title">Certificates</h2>
+    <div class="card">
+        {% if certificates %}
+        <div class="pill-wrap">
+            {% for cert in certificates %}
+            <span class="pill pill--skill"
+                style="background-color: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.2);">{{
+                cert }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-msg">No certificates detected.</p>
+        {% endif %}
+    </div>
 
 </div>
 
 <div class="tab-panel" id="tab-jobmatch">
-{% if job_review %}
+    {% if job_review %}
     {% set jr = job_review %}
     {% if jr.match_score >= 80 %}
-        {% set jr_class = "excellent" %}
+    {% set jr_class = "excellent" %}
     {% elif jr.match_score >= 60 %}
-        {% set jr_class = "good" %}
+    {% set jr_class = "good" %}
     {% elif jr.match_score >= 40 %}
-        {% set jr_class = "fair" %}
+    {% set jr_class = "fair" %}
     {% else %}
-        {% set jr_class = "poor" %}
+    {% set jr_class = "poor" %}
     {% endif %}
 
     <h2 class="section-title">JD Review</h2>
@@ -426,7 +474,7 @@
         </ul>
     </div>
     {% endif %}
-{% else %}
+    {% else %}
     <div class="empty-state">
         <div class="empty-state__icon">Job</div>
         <h3 class="empty-state__title">
@@ -440,13 +488,13 @@
             Try with Job Description
         </a>
     </div>
-{% endif %}
+    {% endif %}
 
     <!-- ── Role-Specific ATS Adjustment ────────────────────────── -->
     {% if role_ats %}
     <div class="analysis-section analysis-section--margin-top">
         <h2 class="section-title">Role-Specific ATS Adjustment</h2>
-        
+
         <div class="score-comparison">
             <div class="comparison-card">
                 <div class="comparison-card__label">Base ATS Score</div>
@@ -504,10 +552,10 @@
 
         <div class="keywords-categories">
             {% for category, keywords in [
-                ("Technical Skills", keyword_gaps.technical),
-                ("Soft Skills", keyword_gaps.soft_skills),
-                ("Tools & Platforms", keyword_gaps.tools),
-                ("Domain Knowledge", keyword_gaps.domain)
+            ("Technical Skills", keyword_gaps.technical),
+            ("Soft Skills", keyword_gaps.soft_skills),
+            ("Tools & Platforms", keyword_gaps.tools),
+            ("Domain Knowledge", keyword_gaps.domain)
             ] %}
             {% if keywords %}
             <div class="keywords-category">
@@ -542,7 +590,7 @@
                     </div>
                 </div>
             </div>
-            
+
             {% if keyword_gaps.simulation.keywords_to_add %}
             <div class="keywords-divider">
                 <p class="small-label">Top Keywords to Add:</p>
@@ -581,170 +629,170 @@
         </div>
 
         <div id="strengthsContainer" class="feedback-grid feedback-grid--strengths"></div>
-    {% endif %}
+        {% endif %}
 
-    {# Detailed per-section feedback cards removed by request. #}
-</div>
+        {# Detailed per-section feedback cards removed by request. #}
+    </div>
 
-<script>
-document.querySelectorAll('.tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-        document.querySelectorAll('.tab')
-            .forEach(function(t) {
-                t.classList.remove('tab--active');
+    <script>
+        document.querySelectorAll('.tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.tab')
+                    .forEach(function (t) {
+                        t.classList.remove('tab--active');
+                    });
+                document.querySelectorAll('.tab-panel')
+                    .forEach(function (p) {
+                        p.classList.remove('tab-panel--active');
+                    });
+                tab.classList.add('tab--active');
+                document.getElementById('tab-' + tab.dataset.tab)
+                    .classList.add('tab-panel--active');
             });
-        document.querySelectorAll('.tab-panel')
-            .forEach(function(p) {
-                p.classList.remove('tab-panel--active');
+        });
+
+        {% if formatting_result %}
+        (function () {
+            var feedback = {
+                issues: {{ (formatting_result.issues |default ([]))| tojson }},
+                strengths: {{ (formatting_result.passes |default ([]))| tojson }}
+            };
+
+        var sectionFeedback = {{ (section_feedback |default ({}))| tojson }};
+
+        function collectSectionTips(source) {
+            var keys = ['contact', 'experience', 'education', 'skills', 'summary'];
+            var merged = [];
+
+            if (!source || typeof source !== 'object') {
+                return merged;
+            }
+
+            keys.forEach(function (key) {
+                var block = source[key];
+                var status = block && block.status ? String(block.status).toLowerCase() : '';
+                if (block && status !== 'good' && Array.isArray(block.tips)) {
+                    block.tips.forEach(function (tip) {
+                        if (tip && String(tip).trim()) {
+                            merged.push(String(tip).trim());
+                        }
+                    });
+                }
             });
-        tab.classList.add('tab--active');
-        document.getElementById('tab-' + tab.dataset.tab)
-            .classList.add('tab-panel--active');
-    });
-});
 
-{% if formatting_result %}
-(function() {
-    var feedback = {
-        issues: {{ (formatting_result.issues|default([]))|tojson }},
-        strengths: {{ (formatting_result.passes|default([]))|tojson }}
-    };
-
-    var sectionFeedback = {{ (section_feedback|default({}))|tojson }};
-
-    function collectSectionTips(source) {
-        var keys = ['contact', 'experience', 'education', 'skills', 'summary'];
-        var merged = [];
-
-        if (!source || typeof source !== 'object') {
-            return merged;
+            return Array.from(new Set(merged));
         }
 
-        keys.forEach(function(key) {
-            var block = source[key];
-            var status = block && block.status ? String(block.status).toLowerCase() : '';
-            if (block && status !== 'good' && Array.isArray(block.tips)) {
-                block.tips.forEach(function(tip) {
-                    if (tip && String(tip).trim()) {
-                        merged.push(String(tip).trim());
-                    }
-                });
-            }
-        });
+        var issues = collectSectionTips(sectionFeedback);
+        var strengths = feedback.strengths || [];
 
-        return Array.from(new Set(merged));
-    }
+        var issueCountBadge = document.getElementById('issueCountBadge');
+        var strengthCountBadge = document.getElementById('strengthCountBadge');
+        var issuesContainer = document.getElementById('issuesContainer');
+        var strengthsContainer = document.getElementById('strengthsContainer');
 
-    var issues = collectSectionTips(sectionFeedback);
-    var strengths = feedback.strengths || [];
+        if (!issueCountBadge || !strengthCountBadge || !issuesContainer || !strengthsContainer) {
+            return;
+        }
 
-    var issueCountBadge = document.getElementById('issueCountBadge');
-    var strengthCountBadge = document.getElementById('strengthCountBadge');
-    var issuesContainer = document.getElementById('issuesContainer');
-    var strengthsContainer = document.getElementById('strengthsContainer');
+        // Create and render issue cards
+        function createIssueCard(text) {
+            var card = document.createElement('div');
+            card.className = 'feedback-card feedback-card--issue';
 
-    if (!issueCountBadge || !strengthCountBadge || !issuesContainer || !strengthsContainer) {
-        return;
-    }
+            var icon = document.createElement('div');
+            icon.className = 'feedback-card__icon';
+            icon.textContent = '!';
 
-    // Create and render issue cards
-    function createIssueCard(text) {
-        var card = document.createElement('div');
-        card.className = 'feedback-card feedback-card--issue';
-        
-        var icon = document.createElement('div');
-        icon.className = 'feedback-card__icon';
-        icon.textContent = '!';
-        
-        var textEl = document.createElement('p');
-        textEl.className = 'feedback-card__text';
-        textEl.textContent = text;
-        
-        card.appendChild(icon);
-        card.appendChild(textEl);
-        
-        return card;
-    }
+            var textEl = document.createElement('p');
+            textEl.className = 'feedback-card__text';
+            textEl.textContent = text;
 
-    // Create and render strength cards
-    function createStrengthCard(text, number) {
-        var card = document.createElement('div');
-        card.className = 'feedback-card feedback-card--strength';
-        
-        var icon = document.createElement('div');
-        icon.className = 'feedback-card__icon';
-        icon.textContent = String(number || '');
-        
-        var textEl = document.createElement('p');
-        textEl.className = 'feedback-card__text';
-        textEl.textContent = text;
-        
-        card.appendChild(icon);
-        card.appendChild(textEl);
-        
-        return card;
-    }
+            card.appendChild(icon);
+            card.appendChild(textEl);
 
-    // Update badges
-    issueCountBadge.textContent = String(issues.length);
-    strengthCountBadge.textContent = String(strengths.length);
+            return card;
+        }
 
-    // Render issues
-    if (issues.length > 0) {
-        issues.forEach(function(issue) {
-            issuesContainer.appendChild(createIssueCard(issue));
-        });
-    } else {
-        var emptyMsg = document.createElement('p');
-        emptyMsg.style.color = '#64748b';
-        emptyMsg.style.fontStyle = 'italic';
-        emptyMsg.style.margin = '0';
-        emptyMsg.textContent = 'No section tips available.';
-        issuesContainer.appendChild(emptyMsg);
-    }
+        // Create and render strength cards
+        function createStrengthCard(text, number) {
+            var card = document.createElement('div');
+            card.className = 'feedback-card feedback-card--strength';
 
-    // Render strengths
-    if (strengths.length > 0) {
-        strengths.forEach(function(strength, index) {
-            strengthsContainer.appendChild(createStrengthCard(strength, index + 1));
-        });
-    } else {
-        var emptyMsg = document.createElement('p');
-        emptyMsg.style.color = '#64748b';
-        emptyMsg.style.fontStyle = 'italic';
-        emptyMsg.style.margin = '0';
-        emptyMsg.textContent = 'No specific strengths detected.';
-        strengthsContainer.appendChild(emptyMsg);
-    }
-})();
-{% endif %}
+            var icon = document.createElement('div');
+            icon.className = 'feedback-card__icon';
+            icon.textContent = String(number || '');
 
-// Chart.js Radar Chart Initialization
-document.addEventListener("DOMContentLoaded", function() {
-    var ctx = document.getElementById('radarChart');
-    if (ctx) {
-        var data = {
-            labels: [
-                {% for category, values in breakdown.items() %}
-                    "{{ category }}",
-                {% endfor %}
+            var textEl = document.createElement('p');
+            textEl.className = 'feedback-card__text';
+            textEl.textContent = text;
+
+            card.appendChild(icon);
+            card.appendChild(textEl);
+
+            return card;
+        }
+
+        // Update badges
+        issueCountBadge.textContent = String(issues.length);
+        strengthCountBadge.textContent = String(strengths.length);
+
+        // Render issues
+        if (issues.length > 0) {
+            issues.forEach(function (issue) {
+                issuesContainer.appendChild(createIssueCard(issue));
+            });
+        } else {
+            var emptyMsg = document.createElement('p');
+            emptyMsg.style.color = '#64748b';
+            emptyMsg.style.fontStyle = 'italic';
+            emptyMsg.style.margin = '0';
+            emptyMsg.textContent = 'No section tips available.';
+            issuesContainer.appendChild(emptyMsg);
+        }
+
+        // Render strengths
+        if (strengths.length > 0) {
+            strengths.forEach(function (strength, index) {
+                strengthsContainer.appendChild(createStrengthCard(strength, index + 1));
+            });
+        } else {
+            var emptyMsg = document.createElement('p');
+            emptyMsg.style.color = '#64748b';
+            emptyMsg.style.fontStyle = 'italic';
+            emptyMsg.style.margin = '0';
+            emptyMsg.textContent = 'No specific strengths detected.';
+            strengthsContainer.appendChild(emptyMsg);
+        }
+}) ();
+        {% endif %}
+
+        // Chart.js Radar Chart Initialization
+        document.addEventListener("DOMContentLoaded", function () {
+            var ctx = document.getElementById('radarChart');
+            if (ctx) {
+                var data = {
+                    labels: [
+                        {% for category, values in breakdown.items() %}
+                "{{ category }}",
+                    {% endfor %}
             ],
             datasets: [{
                 label: 'Score Percentage',
                 data: [
                     {% for category, values in breakdown.items() %}
                         {% set earned = values.earned %}
-                        {% set total  = values.total %}
-                        {{ ((earned * 100.0) / total) | round(0, 'floor') | int if total else 0 }},
-                    {% endfor %}
+                        {% set total = values.total %}
+            {{ ((earned * 100.0) / total) | round(0, 'floor') | int if total else 0 }},
+        {% endfor %}
                 ],
-                backgroundColor: 'rgba(56, 189, 248, 0.2)',
-                borderColor: 'rgba(56, 189, 248, 0.8)',
+        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+            borderColor: 'rgba(56, 189, 248, 0.8)',
                 pointBackgroundColor: 'rgba(56, 189, 248, 1)',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgba(56, 189, 248, 1)',
-                borderWidth: 2,
+                    pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(56, 189, 248, 1)',
+                                borderWidth: 2,
             }]
         };
 
@@ -760,9 +808,9 @@ document.addEventListener("DOMContentLoaded", function() {
                         max: 100,
                         angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        pointLabels: { 
-                            color: 'rgba(255, 255, 255, 0.7)', 
-                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: 600 } 
+                        pointLabels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: 600 }
                         },
                         ticks: {
                             display: false,
@@ -777,7 +825,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         titleFont: { family: "'Plus Jakarta Sans', sans-serif" },
                         bodyFont: { family: "'Inter', sans-serif" },
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 return context.raw + '%';
                             }
                         }
@@ -788,6 +836,6 @@ document.addEventListener("DOMContentLoaded", function() {
         new Chart(ctx.getContext('2d'), config);
     }
 });
-</script>
+    </script>
 
-{% endblock %}
+    {% endblock %}

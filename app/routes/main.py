@@ -231,8 +231,8 @@ def analyse():
         extracted_keywords = clean_keywords(raw_keywords)
 
         # Experience extraction fallback
-        ner_experience = ner_result.get("experience", [])
-        if ner_experience and isinstance(ner_experience[0], dict):
+        ner_experience = ner_result.get("experience")
+        if ner_experience is not None and isinstance(ner_experience, list):
             work_experience = ner_experience
 
         # Education extraction
@@ -241,6 +241,10 @@ def analyse():
             education = ner_education
         else:
             education = extract_education(resume_text)
+
+        # Certificates & Projects extraction
+        certificates = ner_result.get("certificates", [])
+        projects = ner_result.get("projects", [])
 
         # ATS scoring (6 sections, total 100)
         ats_entities = {
@@ -408,6 +412,8 @@ def analyse():
         extracted_keywords=extracted_keywords,
         work_experience=work_experience,
         education=education,
+        certificates=certificates,
+        projects=projects,
         job_match=job_match,
         chart_paths=chart_paths,
         word_count=word_count,
