@@ -382,7 +382,7 @@ def extract_education_fallback(text: str) -> list:
         'experience', 'work experience', 'employment', 'internship',
         'projects', 'project', 'skills', 'core skills', 'technical skills',
         'certifications', 'certification', 'awards', 'achievements',
-        'publications', 'interests', 'hobbies', 'languages', 'summary',
+        'publications', 'interests', 'hobbies', 'languages', 'language', 'summary',
         'objective', 'profile', 'about', 'contact', 'references'
     ]
 
@@ -481,7 +481,7 @@ def extract_certificates_fallback(text: str) -> list:
         'projects', 'project', 'skills', 'core skills', 'technical skills',
         'education', 'academic background', 'academic qualifications',
         'awards', 'achievements', 'publications', 'interests', 'hobbies', 
-        'languages', 'summary', 'objective', 'profile', 'about', 'contact', 'references'
+        'languages', 'language', 'summary', 'objective', 'profile', 'about', 'contact', 'references'
     ]
 
     cert_start_idx = None
