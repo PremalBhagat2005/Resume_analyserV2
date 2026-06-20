@@ -139,10 +139,10 @@
             <div class="metric-card">
                 <div class="metric-card__label">Readability Score</div>
                 <div class="metric-card__value
-                    {% if readability_result.score >= 80 %}score-band--excellent
-                    {% elif readability_result.score >= 60 %}score-band--good
-                    {% elif readability_result.score >= 40 %}score-band--fair
-                    {% else %}score-band--poor{% endif %}">
+                    {% if readability_result.score >= 80 %}text-green
+                    {% elif readability_result.score >= 60 %}text-accent
+                    {% elif readability_result.score >= 40 %}text-amber
+                    {% else %}text-red{% endif %}">
                     {{ readability_result.score }}
                 </div>
             </div>
