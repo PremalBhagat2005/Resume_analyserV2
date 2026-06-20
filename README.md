@@ -94,6 +94,34 @@ python run.py
 - Supported extensions: pdf, docx, txt
 - Maximum file size: 5 MB
 
+## Architecture Overview
+
+```mermaid
+graph TD
+    A([User / Browser]) <--> B[Frontend - HTML/CSS/Chart.js]
+    B <--> C[Backend - Flask Web Server]
+    
+    C -->|User & History Data| D[(MongoDB)]
+    C -->|AI Response Caching| E[(Redis)]
+    
+    C <-->|Entity Extraction| F[Hugging Face API]
+    C <-->|Semantic Analysis| G[Google Gemini API]
+    C <-->|Authentication| H[Google OAuth]
+```
+
+The application is built using a modern, multi-tier architecture designed for fast and parallel processing:
+
+- **Frontend Interface**: Server-rendered HTML templates via Flask, enhanced with CSS and **Chart.js** for interactive data visualization.
+- **Web Application / Backend**: A **Flask** server handling HTTP requests, file uploads, routing, and orchestrating the analysis pipeline. It utilizes threading to run extraction and scoring tasks concurrently.
+- **Processing Engine**: A parallelized core that simultaneously executes document parsing (PDF, DOCX, TXT), entity extraction (skills, contact info), and complex ATS scoring heuristics.
+- **AI & ML Integration**:
+  - **Hugging Face NER**: Leveraged for extracting complex entities like skills. Includes robust handling and retry logic for API cold-starts.
+  - **LLM APIs (e.g., Gemini)**: Used for advanced semantic analysis, job matching, and scoring.
+- **Data & Caching Layer**:
+  - **MongoDB**: Manages user accounts, OAuth authentication data, and stores historical ATS analysis records.
+  - **Redis**: Caches external AI API responses to significantly speed up repeated analyses and reduce external API calls.
+- **Authentication**: Supports both local account creation (MongoDB) and seamless **Google OAuth** integration.
+
 ## Project Structure
 
 ```
