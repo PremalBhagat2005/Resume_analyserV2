@@ -1,4 +1,4 @@
-# Resume Analyzer V2
+# Resume Analyzer Version 2
 
 Flask-based web application that scores ATS readiness, extracts key resume entities, and optionally compares resume content against a job description.
 
@@ -60,6 +60,7 @@ MONGO_DB_NAME=resume_analyser
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 REDIS_URL=redis://localhost:6379/0
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 Notes:
@@ -69,6 +70,7 @@ Notes:
 - Set `MONGO_URI` to enable account and history features
 - Configure `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` for Google Authentication
 - Set `REDIS_URL` to enable caching for external AI API calls
+- Set `GEMINI_API_KEY` to enable advanced semantic analysis and job description review
 
 3. Start the app:
 
@@ -152,11 +154,15 @@ The application is built using a modern, multi-tier architecture designed for fa
 │   │   ├── keyword_gap.py
 │   │   ├── role_ats_scorer.py
 │   │   ├── section_feedback.py
+│   │   ├── jd_review.py             # Job description review
 │   │   └── analytics.py             # Chart generation
 │   ├── templates/
 │   │   ├── base.html                # Base template with loading overlay
 │   │   ├── index.html               # Upload form
-│   │   └── result.html              # Results dashboard
+│   │   ├── result.html              # Results dashboard
+│   │   ├── history.html             # Analysis history view
+│   │   ├── signin.html              # Sign in page
+│   │   └── signup.html              # Sign up page
 │   ├── static/
 │   │   ├── css/style.css
 │   │   ├── plots/                   # Generated chart images
