@@ -23,6 +23,10 @@ Flask-based web application that scores ATS readiness, extracts key resume entit
 - Saved analysis history (ATS scores) for signed-in users
 - **Fast performance** with parallel API calls and HF cold-start retry logic
 - **Redis Caching**: Caches AI responses (Gemini) to make repeated resume analyses almost instantaneous
+- **AI Bullet Rewriting ✨**: Instantly generate professional variations of your work experience and project bullets using AI.
+- **Editable Results**: Toggle edit mode to manually refine your extracted resume content directly on the page.
+- **ATS-Optimized PDF Export**: Generate and download a clean, single-column ATS-friendly PDF of your updated resume.
+- **Premium Glassmorphic UI**: Enjoy a stunning, modern dark-themed interface with smooth animations and interactive components.
 
 ## Performance Optimizations
 
@@ -90,6 +94,8 @@ python run.py
    - Extracted skills, education, and experience
    - Job match analysis (if job description provided)
    - Suggestions for improvement
+5. **Optimize & Edit**: Use the "Rewrite ✨" buttons to improve your bullets, or click "Edit" to tweak the text manually.
+6. **Export**: Click "Download ATS PDF" to get a clean, perfectly formatted version of your refined resume.
 
 ## File Validation
 
@@ -185,6 +191,8 @@ The application is built using a modern, multi-tier architecture designed for fa
 - `POST /analyse` - Analyze resume and job description
   - Form fields: `resume` (file), `job_description` (optional text)
   - Returns: rendered HTML results page
+- `POST /api/rewrite-bullet` - AI rewrite generator for resume bullets
+- `POST /api/download-ats-pdf` - Generates a clean ATS-friendly PDF from edited data
 
 ## Performance Tips
 

@@ -243,6 +243,49 @@ def extract_email_fallback(text: str) -> str:
     matches = re.findall(email_pattern, text)
     return matches[0] if matches else None
 
+def extract_summary_fallback(text: str) -> str:
+    """Fallback: Extract the professional summary section."""
+    lines = [l.strip() for l in (text or '').split('\n') if l.strip()]
+    
+    summary_headers = [
+        'summary', 'professional summary', 'objective', 'profile', 'career objective', 'about me'
+    ]
+    
+    stop_headers = [
+        'experience', 'work experience', 'employment', 'projects', 'project', 'skills', 
+        'core skills', 'technical skills', 'education', 'academic background', 'certifications', 
+        'awards', 'languages', 'contact', 'references'
+    ]
+    
+    summary_start_idx = None
+    for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+        if len(line.split()) <= 4:
+            clean_header = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', line_lower)
+            if any(clean_header == h for h in summary_headers):
+                summary_start_idx = i
+                break
+                
+    if summary_start_idx is None:
+        return None
+        
+    summary_lines = []
+    for i in range(summary_start_idx + 1, len(lines)):
+        line = lines[i]
+        line_lower = line.lower().strip()
+        
+        if len(line.split()) <= 4:
+            clean_header = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', line_lower)
+            if any(clean_header == h for h in stop_headers):
+                break
+                
+        summary_lines.append(line)
+        
+    if not summary_lines:
+        return None
+        
+    return ' '.join(summary_lines)
+
 
 def extract_phone_fallback(text: str) -> str:
     """Fallback: extract phone number using regex"""
@@ -566,6 +609,7 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
         "name": contact_info['name'],
         "email": contact_info['email'],
         "phone": contact_info['phone'],
+        "summary": None,
         "skills": [],
         "education": extract_education_fallback(resume_text),  # Use fallback for education
         "experience": [],
@@ -575,7 +619,8 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
     
     try:
         prompt = (
-            "Extract resume information and return ONLY valid JSON with keys name, email, phone, skills, education, experience, certificates, projects. "
+            "Extract resume information and return ONLY valid JSON with keys name, email, phone, summary, skills, education, experience, certificates, projects. "
+            "summary must be a short string paragraph capturing the professional summary or objective. "
             "skills must be a list of short technical skills. "
             "education must be a list of objects with keys: institution, degree, location, year. Ensure separate schools are separate objects. "
             "experience must be a list of objects with keys: title, company, duration, description. The 'description' must be an array of string bullet points. "
@@ -598,6 +643,7 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
                 f"Email={entities['email']}, Phone={entities['phone']}"
             )
             print(f"[DEBUG Gemini] Extracted skills via Gemini: {len(entities['skills'])} skills found")
+            print(f"[DEBUG Gemini] Extracted summary via Gemini: {bool(result.get('summary'))}")
 
             if isinstance(result.get("name"), str) and result.get("name").strip():
                 entities["name"] = result["name"].strip()
@@ -605,6 +651,13 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
                 entities["email"] = result["email"].strip()
             if isinstance(result.get("phone"), str) and result.get("phone").strip():
                 entities["phone"] = result["phone"].strip()
+            
+            if isinstance(result.get("summary"), str) and result.get("summary").strip():
+                entities["summary"] = result["summary"].strip()
+            else:
+                entities["summary"] = extract_summary_fallback(resume_text)
+                print(f"[DEBUG] Using fallback for summary: {bool(entities['summary'])}")
+                
             if isinstance(result.get("education"), list) and result.get("education"):
                 entities["education"] = result.get("education")
             if isinstance(result.get("experience"), list) and result.get("experience"):
@@ -636,12 +689,16 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
             return entities
 
         entities['skills'] = extract_skills_fallback(resume_text)
+        if not entities['summary']:
+            entities['summary'] = extract_summary_fallback(resume_text)
         print(f"[DEBUG Gemini] Gemini unavailable, using fallback skills: {len(entities['skills'])} skills found")
         return entities
     
     except Exception as api_error:
         print(f"[DEBUG Gemini] API error during skills extraction, using fallback: {str(api_error)}")
         entities['skills'] = extract_skills_fallback(resume_text)
+        if not entities['summary']:
+            entities['summary'] = extract_summary_fallback(resume_text)
         print(f"[DEBUG Gemini] Extracted contact via regex: Name={entities['name']}, Email={entities['email']}, Phone={entities['phone']}")
         print(f"[DEBUG Gemini] Extracted skills via fallback: {len(entities['skills'])} skills found")
         return entities
@@ -658,6 +715,7 @@ def call_ner_model(resume_text: str) -> Dict[str, Any]:
         "name": entities.get("name"),
         "email": entities.get("email"),
         "phone": entities.get("phone"),
+        "summary": entities.get("summary"),
         "keywords": entities.get("skills", []),
         "skills": entities.get("skills", []),
         "education": entities.get("education", []),

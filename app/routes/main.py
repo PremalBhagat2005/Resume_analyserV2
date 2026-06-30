@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, render_template, request, session, redirect, url_for
+    Blueprint, render_template, request, session, redirect, url_for, jsonify, send_file
 )
 import os
 import tempfile
@@ -21,6 +21,8 @@ from app.services.industry_detector import detect_industry
 from app.services.section_feedback import generate_section_feedback
 from app.services.keyword_gap import categorise_keyword_gaps
 from app.services.role_ats_scorer import score_role_specific_ats
+from app.services.bullet_rewriter import rewrite_bullet
+from app.services.pdf_generator import generate_ats_pdf
 from app.utils.helpers import extract_skills_from_keywords, clean_keywords
 from app.models.db import (
     create_user,
@@ -216,6 +218,7 @@ def analyse():
             name = extract_name_fallback(resume_text)
         email = ner_result.get("email", "")
         phone = ner_result.get("phone", "")
+        summary = ner_result.get("summary", "")
         
         import re
         github_match = re.search(r'(https?://(?:www\.)?github\.com/[A-Za-z0-9_-]+)', resume_text, re.IGNORECASE)
@@ -400,6 +403,7 @@ def analyse():
         name=name,
         email=email,
         phone=phone,
+        summary=summary,
         github=github,
         linkedin=linkedin,
         extracted_skills=extracted_skills,
@@ -420,3 +424,35 @@ def analyse():
         keyword_gaps=keyword_gaps,
         job_review=job_review,
     )
+
+
+@main_bp.route("/api/rewrite-bullet", methods=["POST"])
+def api_rewrite_bullet():
+    data = request.get_json()
+    if not data or "bullet" not in data:
+        return jsonify({"error": "Missing bullet text"}), 400
+    
+    variations = rewrite_bullet(data["bullet"])
+    return jsonify({"variations": variations})
+
+
+@main_bp.route("/api/download-ats-pdf", methods=["POST"])
+def api_download_ats_pdf():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing resume data"}), 400
+    
+    
+    try:
+        pdf_path = generate_ats_pdf(data)
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name="ATS_Optimized_Resume.pdf",
+            mimetype="application/pdf"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[PDF Gen Error] {e}")
+        return jsonify({"error": "Failed to generate PDF"}), 500

@@ -8,7 +8,11 @@
         <div class="result-header__file">FILE {{ filename }}</div>
         <h1 class="result-header__title">Analysis Complete</h1>
     </div>
-    <a href="/" class="btn btn--outline"> Analyse Another Resume</a>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button id="downloadPdfBtn" class="btn btn--primary" style="display: none;">Download ATS PDF</button>
+        <button id="editToggleBtn" class="btn btn--outline" onclick="toggleEditMode()" style="display: none;">Edit</button>
+        <a href="/" class="btn btn--outline"> Analyse Another Resume</a>
+    </div>
 </div>
 
 <div class="tabs" id="tabNav">
@@ -169,16 +173,6 @@
             </div>
         </div>
 
-        {% if readability_result.feedback %}
-        <div class="card">
-            <h3 class="card-title">Feedback</h3>
-            <ul class="feedback-list">
-                {% for fb in readability_result.feedback %}
-                <li class="feedback-item">{{ fb }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
     </div>
     {% endif %}
 
@@ -250,6 +244,22 @@
             </div>
         </div>
         {% endfor %}
+    </div>
+
+    <h2 class="section-title">Professional Summary</h2>
+    <div class="card">
+        {% if summary %}
+        <div class="bullet-container" style="position: relative;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <p id="summaryText" class="timeline-card__desc bullet-text" style="margin: 0; line-height: 1.5; flex: 1;">{{ summary }}</p>
+                <button class="btn btn--outline rewrite-btn"
+                    style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;"
+                    onclick="rewriteBullet(this)">Rewrite ✨</button>
+            </div>
+        </div>
+        {% else %}
+        <p class="empty-msg">No professional summary detected.</p>
+        {% endif %}
     </div>
 
     <h2 class="section-title">Education</h2>
@@ -335,13 +345,25 @@
         </div>
         {% if exp.description %}
         {% if exp.description is string %}
-        <p class="timeline-card__desc">
-            {{ exp.description }}
-        </p>
+        <div class="bullet-container" style="position: relative; margin-bottom: 8px;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <p class="timeline-card__desc bullet-text" style="flex: 1; margin: 0;">{{ exp.description }}</p>
+                <button class="btn btn--outline rewrite-btn"
+                    style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;" onclick="rewriteBullet(this)">Rewrite
+                    ✨</button>
+            </div>
+        </div>
         {% else %}
         <ul class="timeline-card__desc" style="padding-left: 20px; margin-top: 8px; margin-bottom: 0;">
             {% for point in exp.description %}
-            <li style="margin-bottom: 4px; line-height: 1.4;">{{ point }}</li>
+            <li class="bullet-container" style="margin-bottom: 4px; line-height: 1.4; position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <span class="bullet-text" style="flex: 1;">{{ point }}</span>
+                    <button class="btn btn--outline rewrite-btn"
+                        style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;"
+                        onclick="rewriteBullet(this)">Rewrite ✨</button>
+                </div>
+            </li>
             {% endfor %}
         </ul>
         {% endif %}
@@ -369,13 +391,25 @@
         </div>
         {% if proj.description %}
         {% if proj.description is string %}
-        <p class="timeline-card__desc">
-            {{ proj.description }}
-        </p>
+        <div class="bullet-container" style="position: relative; margin-bottom: 8px;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <p class="timeline-card__desc bullet-text" style="flex: 1; margin: 0;">{{ proj.description }}</p>
+                <button class="btn btn--outline rewrite-btn"
+                    style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;" onclick="rewriteBullet(this)">Rewrite
+                    ✨</button>
+            </div>
+        </div>
         {% else %}
         <ul class="timeline-card__desc" style="padding-left: 20px; margin-top: 8px; margin-bottom: 0;">
             {% for point in proj.description %}
-            <li style="margin-bottom: 4px; line-height: 1.4;">{{ point }}</li>
+            <li class="bullet-container" style="margin-bottom: 4px; line-height: 1.4; position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <span class="bullet-text" style="flex: 1;">{{ point }}</span>
+                    <button class="btn btn--outline rewrite-btn"
+                        style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;"
+                        onclick="rewriteBullet(this)">Rewrite ✨</button>
+                </div>
+            </li>
             {% endfor %}
         </ul>
         {% endif %}
@@ -518,7 +552,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" style="margin-bottom: 1.5rem;">
             <h3 class="card-title">JD Keyword Coverage</h3>
             <div class="coverage-info">
                 <div class="coverage-stat">
@@ -648,6 +682,17 @@
                 tab.classList.add('tab--active');
                 document.getElementById('tab-' + tab.dataset.tab)
                     .classList.add('tab-panel--active');
+                    
+                // Show action buttons only on Entity Extraction tab
+                const editBtn = document.getElementById('editToggleBtn');
+                const downloadBtn = document.getElementById('downloadPdfBtn');
+                if (tab.dataset.tab === 'entities') {
+                    if (editBtn) editBtn.style.display = 'inline-block';
+                    if (downloadBtn) downloadBtn.style.display = 'inline-block';
+                } else {
+                    if (editBtn) editBtn.style.display = 'none';
+                    if (downloadBtn) downloadBtn.style.display = 'none';
+                }
             });
         });
 
@@ -657,6 +702,11 @@
                 issues: {{ (formatting_result.issues |default ([]))| tojson }},
                 strengths: {{ (formatting_result.passes |default ([]))| tojson }}
             };
+            
+            {% if readability_result and readability_result.feedback %}
+            var readabilityFeedback = {{ readability_result.feedback | tojson }};
+            feedback.issues = feedback.issues.concat(readabilityFeedback);
+            {% endif %}
 
         var sectionFeedback = {{ (section_feedback |default ({}))| tojson }};
 
@@ -836,6 +886,196 @@
         new Chart(ctx.getContext('2d'), config);
     }
 });
+
+        // JSON data for PDF Generation
+        let resumeData = {
+            name: {{ name | tojson | safe }},
+            email: {{ email | tojson | safe }},
+            phone: {{ phone | tojson | safe }},
+            summary: {{ summary | default('') | tojson | safe }},
+            linkedin: {{ linkedin | tojson | safe }},
+            github: {{ github | tojson | safe }},
+            skills: {{ extracted_skills | tojson | safe }},
+            education: {{ education | tojson | safe }},
+            certificates: {{ certificates | tojson | safe }}
+        };
+
+        let isEditing = false;
+        function toggleEditMode() {
+            isEditing = !isEditing;
+            const btn = document.getElementById('editToggleBtn');
+            const editableElements = document.querySelectorAll('.contact-card__value, #summaryText, .timeline-card__title, .timeline-card__sub, .timeline-card__location, .timeline-card__date, .bullet-text, .pill--skill');
+
+            if (isEditing) {
+                btn.textContent = 'Finish editing';
+                btn.classList.remove('btn--outline');
+                btn.classList.add('btn--primary');
+                editableElements.forEach(el => {
+                    el.contentEditable = "true";
+                    el.style.border = "1px dashed #94a3b8";
+                    el.style.padding = "2px 4px";
+                    el.style.borderRadius = "4px";
+                    el.style.outline = "none";
+                });
+            } else {
+                btn.textContent = 'Edit';
+                btn.classList.add('btn--outline');
+                btn.classList.remove('btn--primary');
+                editableElements.forEach(el => {
+                    el.contentEditable = "false";
+                    el.style.border = "";
+                    el.style.padding = "";
+                    el.style.borderRadius = "";
+                    el.style.outline = "";
+                });
+            }
+        }
+
+        // Handle ATS PDF Download
+        document.getElementById('downloadPdfBtn').addEventListener('click', async function () {
+            this.textContent = 'Generating PDF...';
+            this.disabled = true;
+
+            try {
+                // Scrape current experience bullets from DOM
+                const expCards = document.querySelectorAll('.timeline-card--blue');
+                const experience = Array.from(expCards).map(card => {
+                    const title = card.querySelector('.timeline-card__title')?.textContent.trim() || '';
+                    const company = card.querySelector('.timeline-card__sub')?.textContent.trim() || '';
+                    const duration = card.querySelector('.timeline-card__date')?.textContent.trim() || '';
+                    const bullets = Array.from(card.querySelectorAll('.bullet-text')).map(b => b.textContent.trim());
+                    return { title, company, duration, description: bullets };
+                });
+
+                // Scrape current project bullets from DOM
+                const projCards = document.querySelectorAll('.timeline-card--green');
+                const projects = Array.from(projCards).map(card => {
+                    const title = card.querySelector('.timeline-card__title')?.textContent.trim() || '';
+                    const bullets = Array.from(card.querySelectorAll('.bullet-text')).map(b => b.textContent.trim());
+                    return { title, description: bullets };
+                });
+
+                // Scrape education from DOM
+                const eduCards = document.querySelectorAll('.timeline-card--purple');
+                const education = Array.from(eduCards).map(card => {
+                    const institution = card.querySelector('.timeline-card__title')?.textContent.trim() || '';
+                    const degree = card.querySelector('.timeline-card__sub')?.textContent.trim() || '';
+                    const location = card.querySelector('.timeline-card__location')?.textContent.replace('Location:', '').trim() || '';
+                    const year = card.querySelector('.timeline-card__date')?.textContent.trim() || '';
+                    return { institution, degree, location, year };
+                });
+
+                // Sync contact info and skills back to resumeData
+                const contactVals = document.querySelectorAll('.contact-card__value');
+                if (contactVals.length >= 5) {
+                    resumeData.name = contactVals[0].textContent.trim();
+                    resumeData.email = contactVals[1].textContent.trim();
+                    resumeData.phone = contactVals[2].textContent.trim();
+                    resumeData.linkedin = contactVals[3].textContent.trim();
+                    resumeData.github = contactVals[4].textContent.trim();
+                }
+
+                // Sync summary back
+                const summaryEl = document.getElementById('summaryText');
+                if (summaryEl) {
+                    resumeData.summary = summaryEl.textContent.trim();
+                }
+
+                const payload = {
+                    ...resumeData,
+                    experience: experience,
+                    projects: projects,
+                    education: education
+                };
+
+                const response = await fetch('/api/download-ats-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Failed to generate PDF");
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'ATS_Optimized_Resume.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Error downloading PDF: " + err.message);
+            } finally {
+                this.textContent = 'Download ATS PDF';
+                this.disabled = false;
+            }
+        });
+
+        // Handle Bullet Rewrite
+        async function rewriteBullet(btn) {
+            const container = btn.closest('.bullet-container');
+            const textSpan = container.querySelector('.bullet-text');
+            const originalText = textSpan.textContent;
+
+            // Remove old variation UI if exists
+            const oldUi = container.querySelector('.rewrite-ui');
+            if (oldUi) oldUi.remove();
+
+            btn.textContent = 'Rewriting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/rewrite-bullet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bullet: originalText })
+                });
+                const data = await response.json();
+
+                if (data.variations) {
+                    const ui = document.createElement('div');
+                    ui.className = 'rewrite-ui';
+                    ui.style.cssText = 'margin-top: 10px; padding: 16px; background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; width: 100%; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);';
+
+                    let html = `<p style="margin: 0 0 12px 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); display: flex; align-items: center; gap: 6px;"><span style="font-size: 0.9rem;">✨</span> Select a variation</p><div style="display: flex; flex-direction: column; gap: 10px;">`;
+
+                    data.variations.forEach((v, i) => {
+                        html += `
+                <div style="display: flex; gap: 12px; align-items: flex-start; padding: 12px; background: rgba(0, 0, 0, 0.25); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.03); transition: background 0.2s, border-color 0.2s;" onmouseover="this.style.background='rgba(0, 0, 0, 0.4)'; this.style.borderColor='rgba(255, 255, 255, 0.08)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.25)'; this.style.borderColor='rgba(255, 255, 255, 0.03)';">
+                    <div style="flex: 1; font-size: 0.88rem; line-height: 1.55; color: var(--text);">${v}</div>
+                    <button class="btn btn--primary" style="padding: 4px 14px; font-size: 0.75rem; border-radius: 999px; margin-top: 2px;" onclick="applyVariation(this)">Apply</button>
+                </div>`;
+                    });
+                    html += `</div><button style="margin-top: 12px; padding: 8px 12px; font-size: 0.78rem; font-weight: 600; width: 100%; background: transparent; color: var(--text-muted); border: 1px solid var(--border-light); border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='var(--text)'; this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(255,255,255,0.1)';" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.borderColor='var(--border-light)';" onclick="this.closest('.rewrite-ui').remove()">Cancel</button>`;
+
+                    ui.innerHTML = html;
+                    container.appendChild(ui);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error rewriting bullet.");
+            } finally {
+                btn.textContent = 'Rewrite ✨';
+                btn.disabled = false;
+            }
+        }
+
+        function applyVariation(btn) {
+            const variationText = btn.previousElementSibling.textContent;
+            const container = btn.closest('.bullet-container');
+            const textSpan = container.querySelector('.bullet-text');
+            textSpan.textContent = variationText;
+
+            // Highlight effect
+            textSpan.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+            textSpan.style.transition = 'background-color 1s';
+            setTimeout(() => textSpan.style.backgroundColor = 'transparent', 1500);
+
+            // Remove UI
+            container.querySelector('.rewrite-ui').remove();
+        }
     </script>
 
     {% endblock %}
