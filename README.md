@@ -1,4 +1,9 @@
-# Resume Analyzer Version 2
+<div align="center">
+  <!-- TODO: Replace 'banner.png' with the actual path to your banner image -->
+  <img src="banner.png" alt="AI-Resume-Analyzer Banner" width="100%">
+</div>
+
+# Resume Analyzer Version 2 (ResumeInsight)
 
 Flask-based web application that scores ATS readiness, extracts key resume entities, and optionally compares resume content against a job description.
 
