@@ -22,6 +22,7 @@ from app.services.section_feedback import generate_section_feedback
 from app.services.keyword_gap import categorise_keyword_gaps
 from app.services.role_ats_scorer import score_role_specific_ats
 from app.services.bullet_rewriter import rewrite_bullet
+from app.services.cover_letter import generate_cover_letter
 from app.services.pdf_generator import generate_ats_pdf
 from app.utils.helpers import extract_skills_from_keywords, clean_keywords
 from app.models.db import (
@@ -455,4 +456,23 @@ def api_download_ats_pdf():
         import traceback
         traceback.print_exc()
         print(f"[PDF Gen Error] {e}")
-        return jsonify({"error": "Failed to generate PDF"}), 500
+        return jsonify({"error": "Failed to generate PDF"}), 500
+
+@main_bp.route("/api/generate-cover-letter", methods=["POST"])
+def api_generate_cover_letter():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing data"}), 400
+        
+    job_description = data.get("job_description", "")
+    if not job_description:
+        return jsonify({"error": "Job description is required to generate a cover letter."}), 400
+        
+    try:
+        cover_letter = generate_cover_letter(data, job_description)
+        return jsonify({"cover_letter": cover_letter})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[Cover Letter Route Error] {e}")
+        return jsonify({"error": "Failed to generate Cover Letter"}), 500

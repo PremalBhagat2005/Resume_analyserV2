@@ -26,6 +26,7 @@ Flask-based web application that scores ATS readiness, extracts key resume entit
 - **AI Bullet Rewriting ✨**: Instantly generate professional variations of your work experience and project bullets using AI.
 - **Editable Results**: Toggle edit mode to manually refine your extracted resume content directly on the page.
 - **ATS-Optimized PDF Export**: Generate and download a clean, single-column ATS-friendly PDF of your updated resume.
+- **Tailored Cover Letter Generation ✨**: Automatically draft a highly personalized cover letter using Gemini, weaving in your specific resume skills and experiences to match the targeted Job Description.
 - **Premium Glassmorphic UI**: Enjoy a stunning, modern dark-themed interface with smooth animations and interactive components.
 
 ## Performance Optimizations
@@ -161,7 +162,10 @@ The application is built using a modern, multi-tier architecture designed for fa
 │   │   ├── role_ats_scorer.py
 │   │   ├── section_feedback.py
 │   │   ├── jd_review.py             # Job description review
-│   │   └── analytics.py             # Chart generation
+│   │   ├── analytics.py             # Chart generation
+│   │   ├── bullet_rewriter.py       # AI bullet variation generator
+│   │   ├── cover_letter.py          # AI cover letter generator
+│   │   └── pdf_generator.py         # ATS-friendly PDF builder
 │   ├── templates/
 │   │   ├── base.html                # Base template with loading overlay
 │   │   ├── index.html               # Upload form
@@ -193,6 +197,7 @@ The application is built using a modern, multi-tier architecture designed for fa
   - Returns: rendered HTML results page
 - `POST /api/rewrite-bullet` - AI rewrite generator for resume bullets
 - `POST /api/download-ats-pdf` - Generates a clean ATS-friendly PDF from edited data
+- `POST /api/generate-cover-letter` - Generates a tailored cover letter using the resume profile and job description
 
 ## Performance Tips
 

@@ -640,6 +640,26 @@
     </div>
     {% endif %}
 
+    <!-- ── Tailored Cover Letter ────────────────────────────────── -->
+    <div class="analysis-section analysis-section--margin-top">
+        <h2 class="section-title">Tailored Cover Letter</h2>
+        <div class="card">
+            <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.5;">
+                Generate a highly personalized cover letter tailored to this exact role, using your extracted resume profile and matched skills.
+            </p>
+            <button id="generateCoverLetterBtn" class="btn btn--primary">
+                Generate Cover Letter ✨
+            </button>
+            <div id="coverLetterContainer" style="display: none; margin-top: 1.5rem;">
+                <textarea id="coverLetterOutput" 
+                    style="width: 100%; min-height: 400px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text); padding: 1rem; font-family: 'Inter', sans-serif; font-size: 0.9rem; line-height: 1.6; resize: vertical; margin-bottom: 1rem;" spellcheck="false"></textarea>
+                <button id="copyCoverLetterBtn" class="btn btn--outline">
+                    Copy to Clipboard
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div class="tab-panel" id="tab-feedback">
@@ -1075,6 +1095,92 @@
 
             // Remove UI
             container.querySelector('.rewrite-ui').remove();
+        }
+
+        // Handle Cover Letter Generation
+        const generateCoverLetterBtn = document.getElementById('generateCoverLetterBtn');
+        if (generateCoverLetterBtn) {
+            generateCoverLetterBtn.addEventListener('click', async function () {
+                this.textContent = 'Drafting Cover Letter... ✨';
+                this.disabled = true;
+
+                try {
+                    // Scrape current experience bullets from DOM
+                    const expCards = document.querySelectorAll('.timeline-card--blue');
+                    const experience = Array.from(expCards).map(card => {
+                        const title = card.querySelector('.timeline-card__title')?.textContent.trim() || '';
+                        const company = card.querySelector('.timeline-card__sub')?.textContent.trim() || '';
+                        const duration = card.querySelector('.timeline-card__date')?.textContent.trim() || '';
+                        const bullets = Array.from(card.querySelectorAll('.bullet-text')).map(b => b.textContent.trim());
+                        return { title, company, duration, description: bullets };
+                    });
+
+                    // Scrape current project bullets from DOM
+                    const projCards = document.querySelectorAll('.timeline-card--green');
+                    const projects = Array.from(projCards).map(card => {
+                        const title = card.querySelector('.timeline-card__title')?.textContent.trim() || '';
+                        const bullets = Array.from(card.querySelectorAll('.bullet-text')).map(b => b.textContent.trim());
+                        return { title, description: bullets };
+                    });
+
+                    // Scrape education from DOM
+                    const eduCards = document.querySelectorAll('.timeline-card--purple');
+                    const education = Array.from(eduCards).map(card => {
+                        const institution = card.querySelector('.timeline-card__title')?.textContent.trim() || '';
+                        const degree = card.querySelector('.timeline-card__sub')?.textContent.trim() || '';
+                        const location = card.querySelector('.timeline-card__location')?.textContent.replace('Location:', '').trim() || '';
+                        const year = card.querySelector('.timeline-card__date')?.textContent.trim() || '';
+                        return { institution, degree, location, year };
+                    });
+
+                    // Sync summary back
+                    const summaryEl = document.getElementById('summaryText');
+                    if (summaryEl) {
+                        resumeData.summary = summaryEl.textContent.trim();
+                    }
+
+                    const jobDescriptionText = {{ job_description | default('') | tojson | safe }};
+                    
+                    const payload = {
+                        ...resumeData,
+                        experience: experience,
+                        projects: projects,
+                        education: education,
+                        job_description: jobDescriptionText
+                    };
+
+                    const response = await fetch('/api/generate-cover-letter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const data = await response.json();
+
+                    if (!response.ok) throw new Error(data.error || "Failed to generate cover letter");
+
+                    const container = document.getElementById('coverLetterContainer');
+                    const output = document.getElementById('coverLetterOutput');
+                    
+                    output.value = data.cover_letter;
+                    container.style.display = 'block';
+                    
+                } catch (err) {
+                    alert("Error: " + err.message);
+                } finally {
+                    this.textContent = 'Regenerate Cover Letter ✨';
+                    this.disabled = false;
+                }
+            });
+            
+            document.getElementById('copyCoverLetterBtn').addEventListener('click', function() {
+                const output = document.getElementById('coverLetterOutput');
+                output.select();
+                document.execCommand('copy');
+                const originalText = this.textContent;
+                this.textContent = 'Copied!';
+                setTimeout(() => this.textContent = originalText, 2000);
+            });
         }
     </script>
 
