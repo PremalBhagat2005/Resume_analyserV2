@@ -256,13 +256,43 @@ def extract_phone(text):
     return matches[0] if matches else None
 
 
-ACTION_VERBS = [
+ACTION_VERBS = {
     "managed", "developed", "designed", "implemented", "led", "built",
-    "created", "improved", "optimized", "analyzed", "collaborated",
+    "created", "improved", "optimized", "analyzed", "analysed", "collaborated",
     "delivered", "achieved", "engineered", "deployed", "integrated",
     "automated", "mentored", "coordinated", "researched", "launched",
     "reduced", "increased", "streamlined", "spearheaded", "established",
-]
+    "presented", "maintained", "resolved", "directed", "converted", 
+    "architected", "synthesized", "generated", "drove", "negotiated"
+}
+
+EDU_START_HEADERS = {
+    'education', 'academic background', 'academic qualifications',
+    'qualifications', 'scholastic details', 'educational background'
+}
+
+STOP_HEADERS = {
+    'experience', 'work experience', 'employment', 'internship',
+    'projects', 'project', 'skills', 'core skills', 'technical skills',
+    'certifications', 'certification', 'awards', 'achievements',
+    'publications', 'interests', 'hobbies', 'languages', 'language', 'summary',
+    'objective', 'profile', 'about', 'contact', 'references'
+}
+
+DEGREE_KEYWORDS = {
+    'bachelor', 'b.tech', 'b tech', 'b.e', 'bsc', 'b.sc', 'be',
+    'master', 'm.tech', 'm tech', 'm.e', 'msc', 'm.sc', 'mba',
+    'phd', 'ph.d', 'doctorate', 'diploma',
+    'higher secondary', 'secondary', 'hsc', 'ssc',
+    'technology', 'engineering', 'science', 'commerce', 'arts',
+    'computer science', 'information technology',
+    '10th', '12th', 'matriculation'
+}
+
+INSTITUTION_KEYWORDS = {
+    'university', 'college', 'institute', 'school', 'iit', 'nit',
+    'academy', 'polytechnic', 'vidyalaya', 'mahavidyalaya'
+}
 
 def check_action_verbs(text):
     """

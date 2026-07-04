@@ -213,61 +213,63 @@ def match_job_description(resume_text: str, job_description: str) -> dict:
     section_scores = {}
     requirement_coverage = []
     
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        # Task 1: Get semantic similarity score
-        semantic_future = executor.submit(
-            get_semantic_similarity, 
-            resume_text, 
-            job_description
-        )
+    executor = ThreadPoolExecutor(max_workers=3)
+    # Task 1: Get semantic similarity score
+    semantic_future = executor.submit(
+        get_semantic_similarity, 
+        resume_text, 
+        job_description
+    )
+    
+    # Task 2: Get section similarities
+    sections = {}
+    summary_text = ""
+    if isinstance(resume_text, str):
+        summary_text = resume_text[:500]
+    if summary_text:
+        sections['Summary'] = summary_text
+    if resume_skills:
+        sections['Skills'] = ' '.join(sorted(list(resume_skills)))
+    if resume_text:
+        sections['Experience'] = resume_text
+    
+    sections_future = executor.submit(
+        get_section_similarities,
+        sections if sections else None,
+        job_description
+    )
+    
+    # Task 3: Get requirement coverage
+    requirements_future = executor.submit(
+        _get_jd_requirements_and_coverage,
+        job_description,
+        resume_text
+    )
+    
+    # Collect results as they complete
+    try:
+        raw = semantic_future.result(timeout=90)
+        if raw is not None:
+            semantic_score = round(raw * 100)
+            print(f"[Matcher] Semantic score: {semantic_score}")
+    except Exception as e:
+        print(f"[Matcher] Semantic score failed: {e}")
+    
+    try:
+        section_scores = sections_future.result(timeout=60)
+        if section_scores:
+            print(f"[Matcher] Section scores: {section_scores}")
+    except Exception as e:
+        print(f"[Matcher] Section similarity failed: {e}")
+    
+    try:
+        requirement_coverage = requirements_future.result(timeout=60)
+        if requirement_coverage:
+            print(f"[Matcher] Requirement coverage computed for {len(requirement_coverage)} items")
+    except Exception as e:
+        print(f"[Matcher] Requirement coverage failed: {e}")
         
-        # Task 2: Get section similarities
-        sections = {}
-        summary_text = ""
-        if isinstance(resume_text, str):
-            summary_text = resume_text[:500]
-        if summary_text:
-            sections['Summary'] = summary_text
-        if resume_skills:
-            sections['Skills'] = ' '.join(sorted(list(resume_skills)))
-        if resume_text:
-            sections['Experience'] = resume_text
-        
-        sections_future = executor.submit(
-            get_section_similarities,
-            sections if sections else None,
-            job_description
-        )
-        
-        # Task 3: Get requirement coverage
-        requirements_future = executor.submit(
-            _get_jd_requirements_and_coverage,
-            job_description,
-            resume_text
-        )
-        
-        # Collect results as they complete
-        try:
-            raw = semantic_future.result(timeout=90)
-            if raw is not None:
-                semantic_score = round(raw * 100)
-                print(f"[Matcher] Semantic score: {semantic_score}")
-        except Exception as e:
-            print(f"[Matcher] Semantic score failed: {e}")
-        
-        try:
-            section_scores = sections_future.result(timeout=60)
-            if section_scores:
-                print(f"[Matcher] Section scores: {section_scores}")
-        except Exception as e:
-            print(f"[Matcher] Section similarity failed: {e}")
-        
-        try:
-            requirement_coverage = requirements_future.result(timeout=60)
-            if requirement_coverage:
-                print(f"[Matcher] Requirement coverage computed for {len(requirement_coverage)} items")
-        except Exception as e:
-            print(f"[Matcher] Requirement coverage failed: {e}")
+    executor.shutdown(wait=False)
 
     # Use semantic score as primary — it is far more accurate than keyword overlap
     # Fall back to keyword score only if semantic API completely failed

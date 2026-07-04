@@ -1,6 +1,5 @@
 import re
-import numpy as np
-from app.utils.helpers import extract_keywords, word_count
+from app.utils.helpers import extract_keywords, word_count, ACTION_VERBS, KNOWN_SKILLS, DEGREE_KEYWORDS, INSTITUTION_KEYWORDS
 
 # Define the exact max points for each ATS section to avoid hardcoding
 ATS_MAX_POINTS = {
@@ -104,19 +103,8 @@ def calculate_ats_score(resume_text: str, entities: dict = None) -> dict:
 
     edu_text = resume_text.lower()
 
-    degree_keywords = [
-        'bachelor', 'b.tech', 'b tech', 'be ', 'b.e', 'bsc', 'b.sc',
-        'master', 'm.tech', 'm tech', 'me ', 'm.e', 'msc', 'm.sc',
-        'mba', 'phd', 'ph.d', 'doctorate',
-        'higher secondary', 'hsc', 'ssc', '12th', '10th',
-        'diploma', 'associate degree', 'postgraduate', 'undergraduate',
-        'technology', 'science', 'engineering', 'commerce', 'arts'
-    ]
-
-    institution_keywords = [
-        'university', 'college', 'institute', 'school', 'iit', 'nit',
-        'academy', 'polytechnic', 'vidyalaya', 'mahavidyalaya'
-    ]
+    degree_keywords = list(DEGREE_KEYWORDS)
+    institution_keywords = list(INSTITUTION_KEYWORDS)
 
     edu_headers = ['education', 'academic', 'qualification', 'scholastic']
 
@@ -182,19 +170,9 @@ def calculate_ats_score(resume_text: str, entities: dict = None) -> dict:
     # 5. Action Verbs and Keywords (20 points) - MUCH STRICTER
     keywords = extract_keywords(resume_text)
     
-    action_verbs_list = [
-        'led', 'managed', 'built', 'developed', 'designed', 'implemented', 'created', 'delivered',
-        'improved', 'optimized', 'collaborated', 'coordinated', 'analyzed', 'achieved', 'deployed',
-        'automated', 'maintained', 'resolved', 'spearheaded', 'directed', 'converted', 'architected',
-        'synthesized', 'established', 'launched', 'streamlined', 'increased', 'reduced', 'generated'
-    ]
+    action_verbs_list = list(ACTION_VERBS)
     
-    tech_keywords_list = [
-        'python', 'javascript', 'typescript', 'react', 'node', 'sql', 'api', 'git', 'aws', 'gcp', 'azure',
-        'docker', 'kubernetes', 'machine learning', 'ai', 'data', 'flask', 'django', 'mongodb', 'mysql',
-        'postgresql', 'html', 'css', 'next', 'express', 'tailwind', 'vercel', 'github', 'tensorflow',
-        'pandas', 'numpy', 'scikit', 'hugging face', 'nlp', 'rest', 'oauth', 'redis'
-    ]
+    tech_keywords_list = list(KNOWN_SKILLS)
     
     text_lower = resume_text.lower()
     action_verbs_count = sum(1 for verb in action_verbs_list if verb in text_lower)
@@ -311,60 +289,5 @@ def calculate_ats_score(resume_text: str, entities: dict = None) -> dict:
         'missing_sections': missing_sections,
         'suggestions': suggestions,
         'word_count': word_count_value
-    }
-
-
-def compute_ats_score_with_numpy(breakdown: dict) -> dict:
-    """
-    Compute ATS scores using NumPy for numerical operations.
-    Provides the same output as calculate_ats_score but uses NumPy internally.
-    
-    Args:
-        breakdown: Dictionary containing individual section scores
-    
-    Returns:
-        dict: Same format as calculate_ats_score with numpy-computed metrics
-    """
-    # Define section scores and max points
-    sections = np.array([
-        breakdown.get('contact_info', 0),
-        breakdown.get('skills_section', 0),
-        breakdown.get('education_section', 0),
-        breakdown.get('experience_section', 0),
-        breakdown.get('action_verbs', 0),
-        breakdown.get('resume_length', 0)
-    ], dtype=np.float32)
-    
-    max_points = np.array([
-        ATS_MAX_POINTS["contact_info"],
-        ATS_MAX_POINTS["skills_section"],
-        ATS_MAX_POINTS["education_section"],
-        ATS_MAX_POINTS["experience_section"],
-        ATS_MAX_POINTS["action_verbs_keywords"],
-        ATS_MAX_POINTS["resume_length"]
-    ], dtype=np.float32)
-    
-    # Compute statistics using NumPy
-    normalized_scores = (sections / max_points) * 100  # Normalize to 0-100
-    total_score = float(np.sum(sections))
-    mean_score = float(np.mean(normalized_scores))
-    std_dev = float(np.std(normalized_scores))
-    
-    # Ensure score is within 0-100 range
-    final_score = max(0, min(100, total_score))
-    
-    return {
-        'score': final_score,
-        'mean_normalized': mean_score,
-        'std_dev': std_dev,
-        'section_scores': sections.tolist(),
-        'max_points': max_points.tolist(),
-        'numpy_metrics': {
-            'sum': float(np.sum(sections)),
-            'mean': float(np.mean(sections)),
-            'median': float(np.median(sections)),
-            'max': float(np.max(sections)),
-            'min': float(np.min(sections))
-        }
     }
 

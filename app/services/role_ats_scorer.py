@@ -5,6 +5,8 @@ No hardcoded role names - all dynamic from JD content.
 """
 import re
 from collections import Counter
+from app.utils.helpers import extract_keywords, KNOWN_SKILLS
+from app.services.matcher import STOPWORDS
 
 
 def score_role_specific_ats(
@@ -28,20 +30,7 @@ def score_role_specific_ats(
     """
     # Extract meaningful words from JD
     # Strip stop words dynamically by frequency
-    stop_words = {
-        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to",
-        "for", "of", "with", "by", "from", "as", "is", "are", "was",
-        "were", "be", "been", "being", "have", "has", "had", "do",
-        "does", "did", "will", "would", "could", "should", "may",
-        "might", "shall", "can", "need", "must", "our", "we", "you",
-        "your", "this", "that", "these", "those", "it", "its",
-        "they", "them", "their", "who", "which", "what", "how",
-        "when", "where", "why", "not", "no", "yes", "all", "any",
-        "both", "each", "few", "more", "most", "other", "some",
-        "such", "than", "then", "there", "too", "very", "just",
-        "about", "above", "after", "before", "between", "into",
-        "through", "during", "including", "across", "within",
-    }
+    stop_words = list(STOPWORDS)
 
     # Extract words 3+ chars, not stop words
     jd_words = re.findall(r'\b[a-zA-Z][a-zA-Z0-9+#.]*\b',

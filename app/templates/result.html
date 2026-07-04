@@ -212,8 +212,10 @@
                 <div class="score-bar-sm">
                     <span class="score-bar-sm__label">{{ industry }}</span>
                     <div class="score-bar-sm__track">
+                        {% set max_score = industry_result.scores.values() | max %}
+                        {% set width = (score / max_score * 100) if max_score > 0 else 0 %}
                         <div class="score-bar-sm__fill"
-                            style="width: {{ (score / industry_result.scores.values() | max * 100) | int }}%"></div>
+                            style="width: {{ width | int }}%"></div>
                     </div>
                     <span class="score-bar-sm__value">{{ "%.1f"|format(score) }}</span>
                 </div>

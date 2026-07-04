@@ -3,6 +3,7 @@ Scores how easy a resume is to scan in 6 seconds.
 Based on sentence length, active voice, and structure.
 """
 import re
+from app.utils.helpers import ACTION_VERBS
 
 
 def score_readability(text: str) -> dict:
@@ -54,17 +55,8 @@ def score_readability(text: str) -> dict:
         )
 
     # 2. Action verb usage
-    action_verbs = {
-        "managed", "developed", "built", "designed",
-        "implemented", "led", "created", "improved",
-        "optimized", "delivered", "achieved", "launched",
-        "engineered", "automated", "deployed", "integrated",
-        "collaborated", "coordinated", "spearheaded",
-        "streamlined", "increased", "reduced", "drove",
-        "established", "mentored", "negotiated",
-    }
     text_lower = text.lower()
-    found_verbs = [v for v in action_verbs if v in text_lower]
+    found_verbs = [v for v in ACTION_VERBS if v in text_lower]
 
     if len(found_verbs) < 4:
         feedback.append(

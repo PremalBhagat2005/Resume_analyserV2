@@ -1,4 +1,5 @@
 import re
+from app.utils.helpers import STOP_HEADERS
 
 
 def extract_experience_fallback(resume_text: str) -> list:
@@ -30,7 +31,7 @@ def extract_experience_fallback(resume_text: str) -> list:
             continue
         
         # Stop capturing if we hit another major section
-        stop_headers = ['education', 'skills', 'projects', 'certifications', 'awards', 'publications', 'references']
+        stop_headers = list(STOP_HEADERS)
         if capture and any(h in line_lower for h in stop_headers) and len(line.strip()) < 40:
             capture = False
         

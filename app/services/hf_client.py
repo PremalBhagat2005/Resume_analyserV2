@@ -4,6 +4,8 @@ import re
 from difflib import SequenceMatcher
 from typing import Dict, Any
 
+from app.utils.helpers import KNOWN_SKILLS, EDU_START_HEADERS, STOP_HEADERS, DEGREE_KEYWORDS, INSTITUTION_KEYWORDS
+
 from google import genai
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
@@ -251,11 +253,7 @@ def extract_summary_fallback(text: str) -> str:
         'summary', 'professional summary', 'objective', 'profile', 'career objective', 'about me'
     ]
     
-    stop_headers = [
-        'experience', 'work experience', 'employment', 'projects', 'project', 'skills', 
-        'core skills', 'technical skills', 'education', 'academic background', 'certifications', 
-        'awards', 'languages', 'contact', 'references'
-    ]
+    stop_headers = list(STOP_HEADERS)
     
     summary_start_idx = None
     for i, line in enumerate(lines):
@@ -296,19 +294,7 @@ def extract_phone_fallback(text: str) -> str:
 
 def extract_skills_fallback(text: str) -> list:
     """Fallback: extract skills by looking for common keywords"""
-    skills_keywords = [
-        'python', 'java', 'javascript', 'typescript', 'csharp', 'cpp', 'ruby', 'php', 'swift', 'kotlin',
-        'react', 'vue', 'angular', 'django', 'flask', 'fastapi', 'spring', 'nodejs', 'express',
-        'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch',
-        'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'gitlab', 'github',
-        'html', 'css', 'sass', 'bootstrap', 'tailwind',
-        'git', 'linux', 'unix', 'windows', 'macos',
-        'machine learning', 'deep learning', 'tensorflow', 'pytorch', 'scikit-learn',
-        'data analysis', 'data science', 'analytics', 'tableau', 'power bi',
-        'agile', 'scrum', 'jira', 'confluence',
-        'rest api', 'graphql', 'microservices', 'soap',
-        'testing', 'pytest', 'junit', 'selenium', 'cypress'
-    ]
+    skills_keywords = list(KNOWN_SKILLS)
     
     text_lower = text.lower()
     found_skills = []
@@ -416,33 +402,13 @@ def extract_education_fallback(text: str) -> list:
     """Extract education entries using strict section-based parsing."""
     lines = [l.strip() for l in (text or '').split('\n') if l.strip()]
 
-    edu_start_headers = [
-        'education', 'academic background', 'academic qualifications',
-        'qualifications', 'scholastic details', 'educational background'
-    ]
+    edu_start_headers = list(EDU_START_HEADERS)
 
-    stop_headers = [
-        'experience', 'work experience', 'employment', 'internship',
-        'projects', 'project', 'skills', 'core skills', 'technical skills',
-        'certifications', 'certification', 'awards', 'achievements',
-        'publications', 'interests', 'hobbies', 'languages', 'language', 'summary',
-        'objective', 'profile', 'about', 'contact', 'references'
-    ]
+    stop_headers = list(STOP_HEADERS)
 
-    degree_keywords = [
-        'bachelor', 'b.tech', 'b tech', 'b.e', 'bsc', 'b.sc', 'be',
-        'master', 'm.tech', 'm tech', 'm.e', 'msc', 'm.sc', 'mba',
-        'phd', 'ph.d', 'doctorate', 'diploma',
-        'higher secondary', 'secondary', 'hsc', 'ssc',
-        'technology', 'engineering', 'science', 'commerce', 'arts',
-        'computer science', 'information technology',
-        '10th', '12th', 'matriculation'
-    ]
+    degree_keywords = list(DEGREE_KEYWORDS)
 
-    institution_keywords = [
-        'university', 'college', 'institute', 'school', 'iit', 'nit',
-        'academy', 'polytechnic', 'vidyalaya', 'mahavidyalaya'
-    ]
+    institution_keywords = list(INSTITUTION_KEYWORDS)
 
     edu_start_idx = None
     for i, line in enumerate(lines):

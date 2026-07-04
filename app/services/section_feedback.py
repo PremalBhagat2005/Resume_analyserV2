@@ -3,6 +3,8 @@ Gives targeted feedback per resume section.
 All logic is pattern-based - no hardcoded names.
 """
 import re
+import json
+from app.utils.helpers import ACTION_VERBS
 
 
 def generate_section_feedback(
@@ -72,15 +74,7 @@ def generate_section_feedback(
 
     # Experience section
     exp_tips = []
-    action_verbs = {
-        "managed", "built", "developed", "led", "designed",
-        "implemented", "created", "improved", "optimized",
-        "delivered", "launched", "engineered", "automated",
-        "deployed", "increased", "reduced", "streamlined",
-        "collaborated", "spearheaded", "coordinated",
-        "researched", "analysed", "analyzed", "presented",
-    }
-    found_verbs = [v for v in action_verbs if v in text_lower]
+    found_verbs = [v for v in ACTION_VERBS if v in text_lower]
 
     # Helper: Check if experience entries have real content
     def has_real_content(exp_list: list) -> bool:

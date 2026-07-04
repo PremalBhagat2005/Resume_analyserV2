@@ -198,21 +198,23 @@ def analyse():
         ner_result = None
         work_experience = None
         
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            ner_future = executor.submit(call_ner_model, resume_text)
-            experience_future = executor.submit(extract_work_experience, resume_text)
+        executor = ThreadPoolExecutor(max_workers=2)
+        ner_future = executor.submit(call_ner_model, resume_text)
+        experience_future = executor.submit(extract_work_experience, resume_text)
+        
+        try:
+            ner_result = ner_future.result(timeout=90)
+        except Exception as e:
+            print(f"[Analyse] NER extraction failed: {e}")
+            ner_result = {"name": None, "email": "", "phone": "", "keywords": []}
+        
+        try:
+            work_experience = experience_future.result(timeout=30)
+        except Exception as e:
+            print(f"[Analyse] Experience extraction failed: {e}")
+            work_experience = []
             
-            try:
-                ner_result = ner_future.result(timeout=90)
-            except Exception as e:
-                print(f"[Analyse] NER extraction failed: {e}")
-                ner_result = {"name": None, "email": "", "phone": "", "keywords": []}
-            
-            try:
-                work_experience = experience_future.result(timeout=30)
-            except Exception as e:
-                print(f"[Analyse] Experience extraction failed: {e}")
-                work_experience = []
+        executor.shutdown(wait=False)
         
         name = ner_result.get("name")
         if not name or str(name).strip().lower() == "not detected":
@@ -277,20 +279,10 @@ def analyse():
                 job_match=job_match,
                 extracted_skills=extracted_skills,
             )
-
-        # Restore analytics chart generation with graceful fallback.
+        
+        # Disabled server-side chart generation (causes deadlocks and unused in frontend)
         chart_paths = {}
-        try:
-            from app.services.analytics import create_analytics
-            analytics = create_analytics()
-            chart_paths = analytics.generate_charts(
-                ats_result=ats_result,
-                match_result=job_match,
-                extracted_entities=ats_entities,
-            )
-        except Exception:
-            chart_paths = {}
-
+        
         # Score band
         if score >= 80:
             score_band, score_class = "Excellent", "excellent"
@@ -344,7 +336,7 @@ def analyse():
             education=education,
             extracted_skills=extracted_skills,
         )
-
+        
         # Role-specific ATS (only if JD provided)
         role_ats = None
         if job_description:
