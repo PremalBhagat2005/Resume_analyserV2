@@ -59,5 +59,14 @@ def rewrite_bullet(bullet_text: str) -> List[str]:
 
         return [f"Enhanced: {bullet_text}"]
     except Exception as exc:
-        print(f"[Bullet Rewriter] Failed: {exc}")
+        print(f"[Bullet Rewriter] Gemini failed: {exc}")
+        
+        from app.services.hf_client import _hf_generate
+        print("[Bullet Rewriter] Attempting Hugging Face fallback...")
+        hf_payload = _hf_generate(prompt, expect_json=True)
+        
+        if isinstance(hf_payload, list) and len(hf_payload) > 0:
+            print("[Bullet Rewriter] Fallback to HF succeeded.")
+            return [str(v) for v in hf_payload[:3]]
+            
         return [f"Error rewriting: {bullet_text}"]

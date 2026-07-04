@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import time
+import requests
 from difflib import SequenceMatcher
 from typing import Dict, Any
 
@@ -18,6 +20,9 @@ USE_GEMINI_SEMANTIC_SIMILARITY = os.getenv("USE_GEMINI_SEMANTIC_SIMILARITY", "fa
     "yes",
     "on",
 }
+
+HF_MODEL = os.getenv("HF_MODEL", "meta-llama/Meta-Llama-3-8B-Instruct")
+HF_API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 
 def _get_gemini_client():
@@ -50,6 +55,54 @@ def _extract_json_payload(text: str) -> dict:
     raise ValueError("Gemini response did not contain valid JSON")
 
 
+def _hf_generate(prompt: str, expect_json: bool = False) -> str | dict | None:
+    api_key = os.getenv("HF_API_KEY")
+    if not api_key:
+        print("[HF Fallback] HF_API_KEY not set.")
+        return None
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": HF_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 1024,
+        "temperature": 0.2
+    }
+    
+    print("[HF Fallback] Attempting Hugging Face generation...")
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
+            if response.status_code == 503:
+                print(f"[HF Fallback] Model loading. Retrying in {RETRY_DELAY}s...")
+                time.sleep(RETRY_DELAY)
+                continue
+                
+            response.raise_for_status()
+            data = response.json()
+            
+            if "choices" in data and len(data["choices"]) > 0:
+                text = data["choices"][0]["message"]["content"]
+                if expect_json:
+                    return _extract_json_payload(text)
+                return text.strip()
+            
+            print(f"[HF Fallback] Unexpected response structure: {data}")
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            print(f"[HF Fallback] Network error: {e}")
+            break
+        except Exception as e:
+            print(f"[HF Fallback] Parsing error: {e}")
+            break
+            
+    return None
+
+
 def _gemini_generate_json(prompt: str) -> dict | None:
     from app.utils.cache import get_cache_key, get_cached_json, set_cached_json
     
@@ -59,22 +112,34 @@ def _gemini_generate_json(prompt: str) -> dict | None:
         print("[CACHE HIT] _gemini_generate_json")
         return cached_result
 
-    client = _get_gemini_client()
-    if client is None:
-        return None
+    try:
+        client = _get_gemini_client()
+        if client is None:
+            raise ValueError("GEMINI_API_KEY not set")
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "temperature": 0.2,
-            "response_mime_type": "application/json",
-        },
-    )
-    result = _extract_json_payload(getattr(response, "text", "") or "")
-    if result:
-        set_cached_json(cache_key, result)
-    return result
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config={
+                "temperature": 0.2,
+                "response_mime_type": "application/json",
+            },
+        )
+        result = _extract_json_payload(getattr(response, "text", "") or "")
+        if result:
+            set_cached_json(cache_key, result)
+            return result
+    except Exception as e:
+        print(f"[Gemini] Primary generation failed: {e}")
+        
+    # Fallback to Hugging Face
+    hf_result = _hf_generate(prompt, expect_json=True)
+    if hf_result:
+        print("[Gemini -> HF Fallback] Successfully used Hugging Face API.")
+        set_cached_json(cache_key, hf_result)
+        return hf_result
+        
+    return None
 
 
 def _local_similarity_fallback(text_a: str, text_b: str) -> float | None:
@@ -670,25 +735,6 @@ def extract_entities(resume_text: str) -> Dict[str, Any]:
         return entities
 
 
-def call_ner_model(resume_text: str) -> Dict[str, Any]:
-    """
-    Backward-compatible NER API used by older route handlers.
-
-    Current extraction returns `skills`; legacy callers expect `keywords`.
-    """
-    entities = extract_entities(resume_text)
-    return {
-        "name": entities.get("name"),
-        "email": entities.get("email"),
-        "phone": entities.get("phone"),
-        "summary": entities.get("summary"),
-        "keywords": entities.get("skills", []),
-        "skills": entities.get("skills", []),
-        "education": entities.get("education", []),
-        "experience": entities.get("experience", []),
-        "certificates": entities.get("certificates", []),
-        "projects": entities.get("projects", []),
-    }
 
 
 def get_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:

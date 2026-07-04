@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from concurrent.futures import ThreadPoolExecutor
 
 from app.services.parser import extract_text
-from app.services.hf_client import call_ner_model, extract_name_fallback
+from app.services.hf_client import extract_entities, extract_name_fallback
 from app.services.ats_scorer import calculate_ats_score
 from app.services.matcher import match_resume_to_job
 from app.services.jd_review import generate_jd_review
@@ -192,21 +192,21 @@ def analyse():
             )
 
         # Step 2 + 3: Run entity extraction and experience extraction in parallel
-        # extract_entities hits HF API (slow)
+        # extract_entities hits Gemini/HF API (slow)
         # extract_education is regex-based (fast) and included in experience extraction
         # Running together saves ~2-3 seconds
-        ner_result = None
+        entities_result = None
         work_experience = None
         
         executor = ThreadPoolExecutor(max_workers=2)
-        ner_future = executor.submit(call_ner_model, resume_text)
+        entities_future = executor.submit(extract_entities, resume_text)
         experience_future = executor.submit(extract_work_experience, resume_text)
         
         try:
-            ner_result = ner_future.result(timeout=90)
+            entities_result = entities_future.result(timeout=90)
         except Exception as e:
-            print(f"[Analyse] NER extraction failed: {e}")
-            ner_result = {"name": None, "email": "", "phone": "", "keywords": []}
+            print(f"[Analyse] Entity extraction failed: {e}")
+            entities_result = {"name": None, "email": "", "phone": "", "skills": []}
         
         try:
             work_experience = experience_future.result(timeout=30)
@@ -216,12 +216,12 @@ def analyse():
             
         executor.shutdown(wait=False)
         
-        name = ner_result.get("name")
+        name = entities_result.get("name")
         if not name or str(name).strip().lower() == "not detected":
             name = extract_name_fallback(resume_text)
-        email = ner_result.get("email", "")
-        phone = ner_result.get("phone", "")
-        summary = ner_result.get("summary", "")
+        email = entities_result.get("email", "")
+        phone = entities_result.get("phone", "")
+        summary = entities_result.get("summary", "")
         
         import re
         github_match = re.search(r'(https?://(?:www\.)?github\.com/[A-Za-z0-9_-]+)', resume_text, re.IGNORECASE)
@@ -230,27 +230,27 @@ def analyse():
         linkedin_match = re.search(r'(https?://(?:www\.|[a-z]{2}\.)?linkedin\.com/in/[A-Za-z0-9_-]+)', resume_text, re.IGNORECASE)
         linkedin = linkedin_match.group(1) if linkedin_match else ""
 
-        raw_keywords = ner_result.get("keywords", [])
+        raw_keywords = entities_result.get("skills", [])
 
         # Skills and keyword cleanup
         extracted_skills = extract_skills_from_keywords(raw_keywords)
         extracted_keywords = clean_keywords(raw_keywords)
 
         # Experience extraction fallback
-        ner_experience = ner_result.get("experience")
-        if ner_experience is not None and isinstance(ner_experience, list):
-            work_experience = ner_experience
+        extracted_experience = entities_result.get("experience")
+        if extracted_experience is not None and isinstance(extracted_experience, list):
+            work_experience = extracted_experience
 
         # Education extraction
-        ner_education = ner_result.get("education", [])
-        if ner_education and isinstance(ner_education[0], dict):
-            education = ner_education
+        extracted_education = entities_result.get("education", [])
+        if extracted_education and isinstance(extracted_education[0], dict):
+            education = extracted_education
         else:
             education = extract_education(resume_text)
 
         # Certificates & Projects extraction
-        certificates = ner_result.get("certificates", [])
-        projects = ner_result.get("projects", [])
+        certificates = entities_result.get("certificates", [])
+        projects = entities_result.get("projects", [])
 
         # ATS scoring (6 sections, total 100)
         ats_entities = {

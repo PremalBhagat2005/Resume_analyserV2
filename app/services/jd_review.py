@@ -169,4 +169,23 @@ def generate_jd_review(
         }
     except Exception as exc:
         print(f"[JD Review] Gemini review failed: {exc}")
+        
+        # Fallback to Hugging Face
+        from app.services.hf_client import _hf_generate
+        print("[JD Review] Attempting Hugging Face fallback...")
+        hf_payload = _hf_generate(prompt, expect_json=True)
+        if isinstance(hf_payload, dict):
+            print("[JD Review] Fallback to HF succeeded.")
+            return {
+                "match_score": int(hf_payload.get("match_score") or 0),
+                "experience_fit": str(hf_payload.get("experience_fit") or "Partial"),
+                "matched_skills": list(hf_payload.get("matched_skills") or [])[:10],
+                "missing_skills": list(hf_payload.get("missing_skills") or [])[:10],
+                "explanation": str(hf_payload.get("explanation") or ""),
+                "recommendations": list(hf_payload.get("recommendations") or [])[:5],
+                "jd_analysis": jd_analysis,
+                "source": "hf_fallback",
+            }
+            
+        print("[JD Review] HF fallback failed, using basic fallback.")
         return _fallback_review(job_match)

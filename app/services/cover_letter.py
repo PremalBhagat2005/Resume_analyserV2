@@ -67,5 +67,21 @@ Job Description:
                 
         return text
     except Exception as exc:
-        print(f"[Cover Letter Error] {exc}")
+        print(f"[Cover Letter Error] Gemini failed: {exc}")
+        
+        from app.services.hf_client import _hf_generate
+        print("[Cover Letter] Attempting Hugging Face fallback...")
+        hf_text = _hf_generate(prompt, expect_json=False)
+        if isinstance(hf_text, str) and hf_text.strip():
+            print("[Cover Letter] Fallback to HF succeeded.")
+            
+            if hf_text.startswith("```"):
+                lines = hf_text.split("\n")
+                if len(lines) > 1:
+                    hf_text = "\n".join(lines[1:])
+                if hf_text.endswith("```"):
+                    hf_text = hf_text[:-3].strip()
+            
+            return hf_text
+            
         return "An error occurred while generating the cover letter with AI. Please try again later."
