@@ -208,22 +208,25 @@ The application is built using a modern, multi-tier architecture designed for fa
 
 ## Performance Tips
 
-- First run may take 20-40 seconds (HF model cold-start)
-- Subsequent runs are much faster (2-5 seconds)
-- Job description matching is optional but provides additional insights
-- Loading overlay displays progress while analysis is running
+- **Redis Caching**: Repeated analyses of the same resume/job description are almost instantaneous.
+- First run typically takes 2-5 seconds using the primary Google Gemini API.
+- If falling back to Hugging Face, the first run may take 20-40 seconds (HF model cold-start), but subsequent runs are much faster.
+- Job description matching is optional but provides deep insights and enables tailored cover letter generation.
+- Loading overlay displays real-time progress while parallel analysis tasks are running.
 
 ## Known Behavior
 
-- Hugging Face free-tier models may sleep after inactivity; first call triggers wake-up (handled automatically)
-- If API calls fail, app falls back to local keyword/overlap logic
-- Temporary files are automatically cleaned up after analysis
+- **Primary AI (Gemini)**: May encounter rate limits on the free tier, triggering a seamless fallback to Hugging Face.
+- **Fallback AI (Hugging Face)**: Free-tier models may sleep after inactivity; the first fallback call triggers a wake-up (handled automatically with retry logic).
+- **Ultimate Fallback**: If all external API calls fail, the app falls back to local Python keyword/overlap logic to ensure uninterrupted service.
+- Temporary files are automatically cleaned up immediately after analysis.
 
 ## Deployment Notes
 
-- Flask app runs with `threaded=True` for concurrent request handling
-- Compatible with Vercel, Heroku, and other WSGI-compatible platforms
-- vercel.json configured for Python runtime
+- Flask app runs with `threaded=True` for concurrent request handling.
+- Compatible with Vercel, Heroku, Render, and other WSGI-compatible platforms.
+- `vercel.json` is configured for the Python runtime.
+- **External Services**: Ensure MongoDB (for users/history) and Redis (for AI caching) are configured properly (e.g., via MongoDB Atlas and Upstash/Render for cloud deployments).
 
 
 
