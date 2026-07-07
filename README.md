@@ -40,10 +40,10 @@ This version includes a robust multi-layered AI system and performance improveme
 
 1. **Multi-Layer AI Fallback**: Primary requests go to **Google Gemini**. If it fails (quota limits, auth errors), requests automatically fall back to **Hugging Face Llama-3** via the Unified API Router, ensuring the app never breaks.
 2. **HF Model Cold-Start Handling**: Automatic retry logic with exponential backoff for Hugging Face model wake-ups (503 responses)
-2. **Parallel Job Matching**: Semantic analysis, section scoring, and requirement coverage run concurrently
-3. **Parallel Resume Analysis**: Entity extraction and experience extraction run simultaneously
-4. **Loading Overlay**: User sees immediate feedback with animated loading screen and rotating status messages
-5. **Flask Threading**: Enabled threaded request handling for concurrent operations
+3. **Parallel Job Matching**: Semantic analysis, section scoring, and requirement coverage run concurrently
+4. **Parallel Resume Analysis**: Entity extraction and experience extraction run simultaneously
+5. **Loading Overlay**: User sees immediate feedback with animated loading screen and rotating status messages
+6. **Flask Threading**: Enabled threaded request handling for concurrent operations
 
 **Result**: 4-6 seconds faster analysis with better UX feedback
 
@@ -51,7 +51,8 @@ This version includes a robust multi-layered AI system and performance improveme
 
 - Python 3.8+
 - Pip
-- Optional but recommended: Hugging Face API key for full NER capabilities
+- Recommended: Gemini API key for primary AI features (semantic analysis, cover letter, rewriting)
+- Optional: Hugging Face API key as fallback for AI capabilities
 
 ## Setup
 
@@ -169,7 +170,6 @@ The application is built using a modern, multi-tier architecture designed for fa
 │   │   ├── role_ats_scorer.py
 │   │   ├── section_feedback.py
 │   │   ├── jd_review.py             # Job description review
-│   │   ├── analytics.py             # Chart generation
 │   │   ├── bullet_rewriter.py       # AI bullet variation generator
 │   │   ├── cover_letter.py          # AI cover letter generator
 │   │   └── pdf_generator.py         # ATS-friendly PDF builder
